@@ -1,0 +1,1269 @@
+<title>LED Workshop</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700&family=Noto+Sans+Arabic:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a workbench — blocks fill the bench, a narrow side drawer holds messages, code and help. */
+:root{
+  --bg:#EEEFF6; --surface:#FFFFFF; --sunk:#F6F6FB; --ink:#1B1A3A; --muted:#5B5A7E; --line:#D9D9E8;
+  --accent:#4338CA; --accent-ink:#FFFFFF; --accent-d:#2E2591;
+  --k-blue:#4C97FF; --k-blue-d:#3373CC; --k-go:#59C059; --k-go-d:#389438; --k-stop:#EC5959; --k-stop-d:#C24545;
+  --k-save:#FFAB19; --k-save-d:#CF8B17; --k-save-t:#4A2E00; --k-file:#5CB1D6; --k-file-d:#2E8EB8;
+  --k-open:#FFBF00; --k-open-d:#CC9900; --k-open-t:#4A3700; --k-setup:#9966FF; --k-setup-d:#774DCB;
+  --lcd:#0B1A28; --lcd-ink:#9FE6D7; --err-bg:#FDECEC; --ok-bg:#E6F5EC;
+  --f-ui:"Rubik","Noto Sans Arabic","Segoe UI",Arial,sans-serif; --f-code:"JetBrains Mono",ui-monospace,Consolas,monospace;
+  --r:12px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#101024; --surface:#17172E; --sunk:#131328; --ink:#E6E6F5; --muted:#A0A0C4; --line:#2B2B48;
+  --accent:#8F89F7; --accent-ink:#120F3A; --accent-d:#5F58C9; --go:#2FBF63; --stop:#F06A6A; --sun:#FFD25E; --sun-ink:#2E2200;
+  --lcd:#050C14; --lcd-ink:#9FE6D7; --err-bg:#3A1C1C; --ok-bg:#163223; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#101024; --surface:#17172E; --sunk:#131328; --ink:#E6E6F5; --muted:#A0A0C4; --line:#2B2B48;
+  --accent:#8F89F7; --accent-ink:#120F3A; --accent-d:#5F58C9; --go:#2FBF63; --stop:#F06A6A; --sun:#FFD25E; --sun-ink:#2E2200;
+  --lcd:#050C14; --lcd-ink:#9FE6D7; --err-bg:#3A1C1C; --ok-bg:#163223; color-scheme:dark}
+html,body{height:100%}
+[hidden]{display:none!important}
+body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-ui);font-size:15px}
+.app{height:100%;display:flex;flex-direction:column;gap:10px;padding-block:10px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));box-sizing:border-box}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px}
+.brand{display:flex;align-items:center;gap:10px;margin-inline-end:auto}
+.status{font-weight:500}
+.brand-mark{width:40px;height:40px;flex:none}
+.brand h1{font-size:21px;font-weight:700;margin:0;line-height:1.1}
+.brand small{display:block;color:var(--muted);font:400 12px var(--f-code);direction:ltr;text-align:left}
+[dir="rtl"] .brand small{text-align:right}
+.lang{display:inline-flex;align-items:center;gap:6px;padding:4px 6px 4px 10px;padding-inline:10px 6px;border-radius:99px;background:var(--surface);border:1px solid var(--line);color:var(--muted)}
+.lang svg{width:16px;height:16px;flex:none}
+.lang select{border:0;background:transparent;color:var(--ink);font:500 14px var(--f-ui);padding:2px 2px;cursor:pointer}
+.lang:focus-within{outline:2px solid var(--k-blue);outline-offset:1px}
+.lang select:focus{outline:none}
+.status{display:inline-flex;align-items:center;gap:7px;padding:6px 12px;border-radius:99px;background:var(--surface);border:1px solid var(--line);font-size:14px;color:var(--muted)}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--muted)}
+.status[data-s="on"] .dot{background:var(--go)} .status[data-s="run"] .dot{background:var(--sun);box-shadow:0 0 0 3px color-mix(in srgb,var(--sun) 35%,transparent)}
+.status[data-s="busy"] .dot{background:var(--accent)}
+.tools{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px}
+.tgroup{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.tgroup + .tgroup{padding-inline-start:12px;border-inline-start:1px solid var(--line)}
+.kbtn{--c:var(--k-blue);--d:var(--k-blue-d);--t:#fff;display:inline-flex;align-items:center;gap:6px;border:0;cursor:pointer;
+  background:var(--c);color:var(--t);padding:7px 12px;padding-inline-start:10px;border-radius:10px;font:600 14px/1.1 var(--f-ui);
+  box-shadow:0 2px 0 var(--d);margin-bottom:2px;transition:transform .08s,box-shadow .08s,filter .15s;user-select:none}
+.kbtn svg{width:17px;height:17px;flex:none}
+.kbtn:hover{filter:brightness(1.06)}
+.kbtn:active{transform:translateY(2px);box-shadow:0 0 0 var(--d)}
+.kbtn:focus-visible{outline:2px solid var(--k-blue);outline-offset:2px}
+.kbtn.big{padding:7px 16px;padding-inline-start:13px}
+.kbtn.small{font-weight:500;font-size:13px;padding:6px 10px;padding-inline-start:9px}
+.kbtn.small svg{width:15px;height:15px}
+.k-run{--c:var(--k-go);--d:var(--k-go-d);--t:#fff}
+.k-stop{--c:var(--k-stop);--d:var(--k-stop-d);--t:#fff}
+.k-save{--c:var(--k-save);--d:var(--k-save-d);--t:var(--k-save-t)}
+.k-file{--c:var(--k-file);--d:var(--k-file-d);--t:#fff}
+.k-open{--c:var(--k-open);--d:var(--k-open-d);--t:var(--k-open-t)}
+.k-setup{--c:var(--k-setup);--d:var(--k-setup-d);--t:#fff}
+button{font:inherit;cursor:pointer}
+.btn{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);
+  padding:9px 14px;border-radius:var(--r);font-weight:500;font-size:15px;transition:transform .08s}
+.btn svg{width:18px;height:18px;flex:none}
+.btn:hover{border-color:var(--accent)} .btn:active{transform:translateY(1px)}
+.btn:focus-visible,.tab:focus-visible{outline:3px solid var(--sun);outline-offset:2px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.go{background:var(--go);border-color:var(--go);color:#fff;font-size:17px;padding:9px 20px}
+.btn.stop{color:var(--stop)} .btn.stop:hover{border-color:var(--stop)}
+.btn.main{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.notice{background:var(--sun);color:var(--sun-ink);border-radius:var(--r);padding:10px 14px;font-size:14px;line-height:1.5}
+.bench{flex:1;display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:10px;min-height:0}
+#blocklyDiv{border-radius:var(--r);overflow:hidden;border:1px solid var(--line);min-height:300px;background:var(--surface)}
+.drawer{display:grid;grid-template-rows:auto 1fr;min-height:0;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.tabs{display:flex;border-bottom:1px solid var(--line)}
+.tab{flex:1;border:0;background:none;color:var(--muted);padding:11px 6px;font-weight:500;border-bottom:3px solid transparent}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.pane{overflow:auto;min-height:0;padding:12px 14px}
+#log{display:flex;flex-direction:column;gap:6px;font-size:14px;line-height:1.5}
+.msg{padding:7px 10px;border-radius:8px;background:var(--sunk)}
+.msg.ok{background:var(--ok-bg)} .msg.err{background:var(--err-bg)}
+.msg.out{font-family:var(--f-code);font-size:13px;direction:ltr;text-align:left;white-space:pre-wrap;background:var(--lcd);color:var(--lcd-ink)}
+.msg details{margin-top:4px} .msg details pre{direction:ltr;text-align:left;white-space:pre-wrap;font:12px var(--f-code);margin:4px 0 0}
+.code-tools{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}.code-tools .btn{padding:6px 10px;font-size:14px}
+#code{margin:0;direction:ltr;text-align:left;font:13px/1.6 var(--f-code);white-space:pre;color:var(--ink)}
+.help h3{font-size:16px;margin:4px 0 8px} .help ol,.help ul{padding-inline-start:20px;margin:0 0 14px;line-height:1.65}
+.help p{line-height:1.6;margin:0 0 12px;color:var(--muted)}
+.lcdmap{display:flex;gap:14px;align-items:center;margin:4px 0 14px}
+.lcdmap .scr{width:62px;height:115px;background:var(--lcd);border-radius:6px;position:relative;flex:none;border:3px solid var(--line)}
+.lcdmap .scr span{position:absolute;font:10px var(--f-code);color:var(--lcd-ink);direction:ltr}
+.lcdmap .scr .o{top:3px;left:4px} .lcdmap .scr .e{bottom:3px;right:4px}
+.lcdmap p{margin:0;font-size:13px}
+code{font-family:var(--f-code);font-size:.9em;direction:ltr;unicode-bidi:isolate}
+.overlay{position:fixed;inset:0;background:color-mix(in srgb,var(--ink) 45%,transparent);display:grid;place-items:center;padding:16px;z-index:50}
+.sheet{background:var(--surface);color:var(--ink);border-radius:16px;max-width:520px;width:100%;padding:22px;box-sizing:border-box;max-height:90vh;overflow:auto}
+.sheet h2{margin:0 0 6px;font-size:20px} .sheet ol{padding-inline-start:20px;line-height:1.7;margin:10px 0 16px}
+.sheet .row{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-start;margin-top:14px}
+.bar{height:10px;background:var(--sunk);border-radius:99px;overflow:hidden;border:1px solid var(--line);margin-top:12px}
+.bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
+#flashLog{font:12px var(--f-code);direction:ltr;text-align:left;color:var(--muted);white-space:pre-wrap;max-height:110px;overflow:auto;margin-top:8px}
+a{color:var(--accent)}
+.examples{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.examples .btn{padding:6px 10px;font-size:14px}
+.pic-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}.pic-row img{image-rendering:pixelated;background:var(--sunk);border:1px solid var(--line);border-radius:6px;width:40px;height:40px;object-fit:contain}.pic-row span{flex:1;min-width:0}
+input[type=file]{font:inherit;max-width:100%}
+@media (max-width:820px){
+  .app{height:auto;min-height:100%}
+  .bench{grid-template-columns:1fr}
+  #blocklyDiv{height:62vh}
+  .drawer{height:340px}
+}
+/* Picture menus (icons, shapes) open as a grid instead of a long list. */
+.blocklyDropDownDiv .blocklyMenu:has(img){display:grid!important;grid-template-columns:repeat(6,auto);gap:4px;padding:6px!important;max-height:min(70vh,420px)!important;overflow-y:auto}
+.blocklyDropDownDiv .blocklyMenu:has(img) .blocklyMenuItem{padding:4px!important;margin:0!important;min-width:0!important;border-radius:8px;display:flex;justify-content:center}
+.blocklyDropDownDiv .blocklyMenu:has(img) .blocklyMenuItemCheckbox{display:none!important}
+.blocklyDropDownDiv .blocklyMenu:has(img) .blocklyMenuItemHighlight{background:rgba(255,255,255,.25)!important}
+.blocklyDropDownDiv .blocklyMenu:has(img) .blocklyMenuItemSelected{outline:2px solid #fff;outline-offset:-2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="app">
+  <header>
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true"><rect width="40" height="40" rx="8" fill="#160C0C"/><rect x="5.0" y="5.0" width="4" height="4" rx="1" fill="#3A2626"/><rect x="11.4" y="5.0" width="4" height="4" rx="1" fill="#FF3B3B"/><rect x="17.8" y="5.0" width="4" height="4" rx="1" fill="#3A2626"/><rect x="24.2" y="5.0" width="4" height="4" rx="1" fill="#FF3B3B"/><rect x="30.6" y="5.0" width="4" height="4" rx="1" fill="#3A2626"/><rect x="5.0" y="11.4" width="4" height="4" rx="1" fill="#FF3B3B"/><rect x="11.4" y="11.4" width="4" height="4" rx="1" fill="#FF3B3B"/><rect x="17.8" y="11.4" width="4" height="4" rx="1" fill="#FF3B3B"/><rect x="24.2" y="11.4" width="4" height="4" rx="1" fill="#FF3B3B"/><rect x="30.6" y="11.4" width="4" height="4" rx="1" fill="#FF3B3B"/><rect x="5.0" y="17.8" width="4" height="4" rx="1" fill="#FF3B3B"/><rect x="11.4" y="17.8" width="4" height="4" rx="1" fill="#FF3B3B"/><rect x="17.8" y="17.8" width="4" height="4" rx="1" fill="#FF3B3B"/><rect x="24.2" y="17.8" width="4" height="4" rx="1" fill="#FF3B3B"/><rect x="30.6" y="17.8" width="4" height="4" rx="1" fill="#FF3B3B"/><rect x="5.0" y="24.2" width="4" height="4" rx="1" fill="#3A2626"/><rect x="11.4" y="24.2" width="4" height="4" rx="1" fill="#FF3B3B"/><rect x="17.8" y="24.2" width="4" height="4" rx="1" fill="#FF3B3B"/><rect x="24.2" y="24.2" width="4" height="4" rx="1" fill="#FF3B3B"/><rect x="30.6" y="24.2" width="4" height="4" rx="1" fill="#3A2626"/><rect x="5.0" y="30.6" width="4" height="4" rx="1" fill="#3A2626"/><rect x="11.4" y="30.6" width="4" height="4" rx="1" fill="#3A2626"/><rect x="17.8" y="30.6" width="4" height="4" rx="1" fill="#FF3B3B"/><rect x="24.2" y="30.6" width="4" height="4" rx="1" fill="#3A2626"/><rect x="30.6" y="30.6" width="4" height="4" rx="1" fill="#3A2626"/></svg>
+      <div><h1>LED Workshop</h1><small>for BBC micro:bit</small></div>
+    </div>
+    <label class="lang" title="Language"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3z"/></svg><select id="langSel" aria-label="Language"></select></label>
+    <span class="status" id="status" data-s="off"><span class="dot"></span><span id="statusText">Not connected</span></span>
+    <div class="tools">
+      <div class="tgroup" role="group" aria-label="Board">
+      <button class="kbtn k-connect" id="btnConnect"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 2v6M15 2v6M6 8h12v4a6 6 0 0 1-12 0V8zM12 18v4"/></svg><span>Connect micro:bit</span></button>
+      <button class="kbtn k-run big" id="btnRun"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l13-7.5z"/></svg>Run</button>
+      <button class="kbtn k-stop" id="btnStop"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>Stop</button>
+      <button class="kbtn k-save" id="btnSave"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M5 3h11l3 3v15H5z"/><path d="M8 3v6h8V3M8 21v-7h8v7"/></svg>Save to micro:bit</button>
+      </div>
+      <div class="tgroup" role="group" aria-label="Files">
+      <button class="kbtn k-file" id="btnSaveFile" title="Save this project as a file on the computer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M4 19h16"/></svg>Save to computer</button>
+      <label class="kbtn k-open" for="importFile" id="btnOpenFile" title="Open a project file from the computer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 6h6l2 2h10v11H3z"/></svg>Open</label>
+      </div>
+      <div class="tgroup" role="group" aria-label="Setup">
+      <button class="kbtn k-setup small" id="btnFlash"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>First-time setup</button>
+      </div>
+    </div>
+  </header>
+  <div class="notice" id="notice" hidden></div>
+  <div class="bench">
+    <div id="blocklyDiv"></div>
+    <aside class="drawer">
+      <div class="tabs" role="tablist">
+        <button class="tab" role="tab" id="t-log" aria-selected="true" data-p="p-log">Messages</button>
+        <button class="tab" role="tab" id="t-code" aria-selected="false" data-p="p-code">Python code</button>
+        <button class="tab" role="tab" id="t-help" aria-selected="false" data-p="p-help">Help</button>
+      </div>
+      <div class="pane" id="p-log"><div id="log"></div></div>
+      <div class="pane" id="p-code" hidden><div class="code-tools"><button class="btn" id="btnPy">Download .py</button><button class="btn" id="btnCopy">Copy code</button></div><pre id="code"></pre></div>
+      <div class="pane help" id="p-help" hidden>
+        <h3>Examples to start with</h3>
+        <div class="examples" id="examples"></div>
+        <h3>Getting started</h3>
+        <ol>
+          <li>Plug the micro:bit into the computer with a USB cable.</li>
+          <li>First time only: click <b>First-time setup</b> and put MicroPython on it.</li>
+          <li>Click <b>Connect micro:bit</b> and pick it from the list.</li>
+          <li>Drag blocks and click <b>Run</b>. The result shows up on the LEDs.</li>
+          <li><b>Save to micro:bit</b> keeps your program, so it runs every time it turns on, even on batteries.</li>
+        </ol>
+        <h3>The LEDs</h3>
+        <div class="lcdmap"><div class="scr" style="width:84px;height:84px"><span class="o">0,0</span><span class="e">4,4</span></div>
+          <p>There are 5 × 5 LEDs. <code>x</code> goes from 0 on the left to 4 on the right, and <code>y</code> from 0 at the top to 4 at the bottom. Brightness goes from 0 (off) to 9.</p></div>
+        <h3>Tips</h3>
+        <ul>
+          <li>Blocks marked <b>V2</b> in their tooltip (logo, sound level, sounds, volume) need a micro:bit V2, the one with a gold logo and a speaker.</li>
+          <li>The <b>compass</b> asks you to tilt the board and fill the LEDs the first time. That's normal.</li>
+          <li><b>Radio</b>: micro:bits only hear each other when they use the same group number.</li>
+          <li>The <b>Colour screen</b> blocks are for the Waveshare 1.8 inch LCD for micro:bit (160 × 128). <code>x</code> goes from 0 to 159 and <code>y</code> from 0 to 127. The screen uses pins P1 and P2, so don't use those in the Pins blocks at the same time. It needs a micro:bit V2.</li>
+          <li><b>Pins</b> P0, P1 and P2 are the big gold rings. They work with 3 V only. Always put a resistor in front of an LED.</li>
+          <li>If the micro:bit stops responding: click <b>Stop</b>. If that doesn't help, press the reset button on the back and connect again.</li>
+        </ul>
+        <h3>My pictures</h3>
+        <p>Add a picture from your computer to use as a character on the colour screen. It's shrunk to fit 32 × 32 pixels, and a plain background is removed.</p>
+        <div id="picList"></div>
+        <div class="examples"><button class="btn" id="btnAddPic">Add a picture</button></div>
+        <h3>My project</h3>
+        <div class="examples">
+          <button class="btn" id="btnExport">Download project file</button>
+          <label class="btn" for="importFile">Open project file</label>
+          <input type="file" id="importFile" accept=".json" hidden>
+          <button class="btn" id="btnNew">Start over</button>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<div class="overlay" id="flashSheet" hidden>
+  <div class="sheet" role="dialog" aria-labelledby="flashTitle">
+    <h2 id="flashTitle">Put MicroPython on the micro:bit (first time only)</h2>
+    <p style="margin:0;color:var(--muted);line-height:1.6">You do this once for each micro:bit. It replaces whatever program was on it.</p>
+    <ol>
+      <li>Plug the micro:bit into the computer.</li>
+      <li>Open <a href="https://python.microbit.org" target="_blank" rel="noopener">python.microbit.org</a> in Chrome or Edge.</li>
+      <li>Click <b>Send to micro:bit</b> and follow the steps. This puts MicroPython on it.</li>
+      <li>Close that tab, come back here and click <b>Connect micro:bit</b>.</li>
+    </ol>
+    <p style="margin:0;color:var(--muted);line-height:1.6">Already used python.microbit.org with this micro:bit? Then it's ready, and you can skip this.</p>
+    <div class="row">
+      <button class="btn main" id="btnCloseFlash">Got it</button>
+    </div>
+  </div>
+</div>
+
+<script type="application/json" id="i18n">{"Screen Workshop":["סדנת המסך","ورشة الشاشة","Taller de pantalla"],"LED Workshop":["סדנת הלדים","ورشة الأضواء","Taller de LED"],"for BBC micro:bit":["for BBC micro:bit","for BBC micro:bit","for BBC micro:bit"],"Language":["שפה","اللغة","Idioma"],"Not connected":["לא מחובר","غير متصل","Sin conectar"],"Board":["לוח","اللوحة","Placa"],"Files":["קבצים","الملفات","Archivos"],"Setup":["התקנה","الإعداد","Configuración"],"Connect board":["חיבור ללוח","اتصال باللوحة","Conectar placa"],"Connect micro:bit":["חיבור למיקרוביט","اتصال بالمايكروبت","Conectar micro:bit"],"Disconnect":["ניתוק","قطع الاتصال","Desconectar"],"Run":["הרצה","تشغيل","Ejecutar"],"Stop":["עצירה","إيقاف","Detener"],"Save to board":["שמירה בלוח","حفظ في اللوحة","Guardar en la placa"],"Save to micro:bit":["שמירה במיקרוביט","حفظ في المايكروبت","Guardar en la micro:bit"],"Save this project as a file on the computer":["שמירת הפרויקט כקובץ במחשב","حفظ المشروع كملف على الحاسوب","Guarda este proyecto como archivo en la computadora"],"Save to computer":["שמירה במחשב","حفظ في الحاسوب","Guardar en la computadora"],"Open a project file from the computer":["פתיחת קובץ פרויקט מהמחשב","فتح ملف مشروع من الحاسوب","Abre un archivo de proyecto de la computadora"],"Open":["פתיחה","فتح","Abrir"],"First-time setup":["התקנה ראשונה","الإعداد الأول","Primera configuración"],"Messages":["הודעות","الرسائل","Mensajes"],"Python code":["קוד פייתון","كود بايثون","Código Python"],"Help":["עזרה","مساعدة","Ayuda"],"Download .py":["הורדת ‎.py","تنزيل ‎.py","Descargar .py"],"Copy code":["העתקת הקוד","نسخ الكود","Copiar código"],"Examples to start with":["דוגמאות להתחלה","أمثلة للبدء","Ejemplos para empezar"],"Getting started":["איך מתחילים","كيف نبدأ","Cómo empezar"],"Tips":["טיפים","نصائح","Consejos"],"My project":["הפרויקט שלי","مشروعي","Mi proyecto"],"Download project file":["הורדת קובץ הפרויקט","تنزيل ملف المشروع","Descargar archivo del proyecto"],"Open project file":["פתיחת קובץ פרויקט","فتح ملف مشروع","Abrir archivo de proyecto"],"Start over":["התחלה מחדש","البدء من جديد","Empezar de nuevo"],"Sure? Click again":["בטוח? לחצו שוב","متأكد؟ اضغط مرة أخرى","¿Seguro? Haz clic otra vez"],"Details for the teacher":["פרטים למורה","تفاصيل للمعلّم","Detalles para el docente"],"Remove":["הסרה","إزالة","Quitar"],"Close":["סגירה","إغلاق","Cerrar"],"Install":["התקנה","تثبيت","Instalar"],"Got it":["הבנתי","فهمت","Entendido"],"Try again":["נסו שוב","حاول مرة أخرى","Intentar de nuevo"],"Choose the file here:":["בחרו את הקובץ כאן:","اختر الملف هنا:","Elige el archivo aquí:"],"Plug the board into the computer with a USB-C cable.":["חברו את הלוח למחשב בכבל USB-C.","صِل اللوحة بالحاسوب بكابل USB-C.","Conecta la placa a la computadora con un cable USB-C."],"First time only: click <b>First-time setup</b> and install MicroPython.":["רק בפעם הראשונה: לחצו על <b>התקנה ראשונה</b> והתקינו MicroPython.","في المرة الأولى فقط: اضغط <b>الإعداد الأول</b> وثبّت MicroPython.","Solo la primera vez: haz clic en <b>Primera configuración</b> e instala MicroPython."],"Click <b>Connect board</b> and pick the board from the list.":["לחצו על <b>חיבור ללוח</b> ובחרו את הלוח מהרשימה.","اضغط <b>اتصال باللوحة</b> واختر اللوحة من القائمة.","Haz clic en <b>Conectar placa</b> y elige la placa de la lista."],"Drag blocks and click <b>Run</b>. The result shows up on the screen.":["גררו בלוקים ולחצו על <b>הרצה</b>. התוצאה תופיע על המסך.","اسحب الكتل واضغط <b>تشغيل</b>. ستظهر النتيجة على الشاشة.","Arrastra bloques y haz clic en <b>Ejecutar</b>. El resultado aparece en la pantalla."],"<b>Save to board</b> keeps your program, so it runs every time the board turns on.":["<b>שמירה בלוח</b> שומרת את התוכנית, כך שהיא תרוץ בכל פעם שהלוח נדלק.","<b>حفظ في اللوحة</b> يحفظ برنامجك، فيعمل كلما شغّلت اللوحة.","<b>Guardar en la placa</b> guarda tu programa para que funcione cada vez que se enciende la placa."],"The screen":["המסך","الشاشة","La pantalla"],"Point <code>x=0, y=0</code> is the top-left corner. <code>x</code> grows to the right up to 171, and <code>y</code> grows downward up to 319.":["הנקודה <code>x=0, y=0</code> היא הפינה השמאלית העליונה. <code>x</code> גדל ימינה עד 171, ו-<code>y</code> גדל למטה עד 319.","النقطة <code>x=0, y=0</code> هي الزاوية العليا اليسرى. يزداد <code>x</code> نحو اليمين حتى 171، ويزداد <code>y</code> نحو الأسفل حتى 319.","El punto <code>x=0, y=0</code> es la esquina superior izquierda. <code>x</code> crece hacia la derecha hasta 171 y <code>y</code> crece hacia abajo hasta 319."],"The screen shows English letters, numbers and symbols.":["המסך מציג אותיות באנגלית, מספרים וסימנים.","تعرض الشاشة الحروف الإنجليزية والأرقام والرموز.","La pantalla muestra letras en inglés, números y símbolos."],"The <b>BOOT</b> button on the board also works as a button for your programs.":["הכפתור <b>BOOT</b> שעל הלוח משמש גם ככפתור בתוכניות שלכם.","يعمل الزر <b>BOOT</b> على اللوحة أيضًا كزر في برامجك.","El botón <b>BOOT</b> de la placa también sirve como botón para tus programas."],"Tilt is measured in degrees, from about -90 to 90.":["ההטיה נמדדת במעלות, בערך מ-‎-90 עד 90.","يُقاس الميل بالدرجات، من نحو ‎-90 إلى 90.","La inclinación se mide en grados, de unos -90 a 90."],"<b>Pins</b> 0, 1 and 10 are on the side headers. They work with 3.3 V only. Never connect 5 V to them, and always put a resistor in front of an LED.":["<b>הפינים</b> 0, 1 ו-10 נמצאים בפסי החיבור שבצד. הם עובדים רק עם 3.3 וולט. אף פעם אל תחברו אליהם 5 וולט, ותמיד שימו נגד לפני נורת LED.","<b>المنافذ</b> 0 و1 و10 موجودة على الشرائط الجانبية. تعمل بجهد 3.3 فولت فقط. لا تصلها أبدًا بـ 5 فولت، وضع دائمًا مقاومة قبل مصباح LED.","Los <b>pines</b> 0, 1 y 10 están en los conectores laterales. Solo funcionan con 3,3 V. Nunca les conectes 5 V y pon siempre una resistencia delante de un LED."],"The <b>SD card</b> must be formatted as FAT32. Files you write can be opened on a computer.":["<b>כרטיס ה-SD</b> צריך להיות מפורמט ב-FAT32. את הקבצים שתכתבו אפשר לפתוח במחשב.","يجب تهيئة <b>بطاقة SD</b> بنظام FAT32. يمكن فتح الملفات التي تكتبها على الحاسوب.","La <b>tarjeta SD</b> debe estar formateada en FAT32. Los archivos que escribas se pueden abrir en una computadora."],"If the board stops responding: click <b>Stop</b>. If that doesn't help, press RESET on the board and connect again.":["אם הלוח מפסיק להגיב: לחצו על <b>עצירה</b>. אם זה לא עוזר, לחצו על RESET שעל הלוח והתחברו שוב.","إذا توقفت اللوحة عن الاستجابة: اضغط <b>إيقاف</b>. إذا لم ينفع ذلك، اضغط RESET على اللوحة واتصل من جديد.","Si la placa deja de responder: haz clic en <b>Detener</b>. Si no funciona, pulsa RESET en la placa y vuelve a conectar."],"Install MicroPython (first time only)":["התקנת MicroPython (רק בפעם הראשונה)","تثبيت MicroPython (في المرة الأولى فقط)","Instalar MicroPython (solo la primera vez)"],"You do this once for each board. It erases whatever was on the board before.":["עושים את זה פעם אחת לכל לוח. זה מוחק את כל מה שהיה על הלוח קודם.","تقوم بهذا مرة واحدة لكل لوحة. سيُمحى كل ما كان على اللوحة من قبل.","Se hace una vez por placa. Borra todo lo que había antes en la placa."],"Download the ESP32-C3 firmware from <a href=\"https://micropython.org/download/ESP32_GENERIC_C3/\" target=\"_blank\" rel=\"noopener\">micropython.org</a> (the <code>.bin</code> file from the latest stable release).":["הורידו את הקושחה ל-ESP32-C3 מהאתר <a href=\"https://micropython.org/download/ESP32_GENERIC_C3/\" target=\"_blank\" rel=\"noopener\">micropython.org</a> (קובץ ה-<code>.bin</code> של הגרסה היציבה האחרונה).","نزّل البرنامج الثابت لـ ESP32-C3 من <a href=\"https://micropython.org/download/ESP32_GENERIC_C3/\" target=\"_blank\" rel=\"noopener\">micropython.org</a> (ملف <code>.bin</code> من أحدث إصدار مستقر).","Descarga el firmware de ESP32-C3 de <a href=\"https://micropython.org/download/ESP32_GENERIC_C3/\" target=\"_blank\" rel=\"noopener\">micropython.org</a> (el archivo <code>.bin</code> de la última versión estable)."],"Click <b>Install</b> and pick the board from the list. If it doesn't work: unplug the board, hold down BOOT, plug it back in, then let go.":["לחצו על <b>התקנה</b> ובחרו את הלוח מהרשימה. אם זה לא עובד: נתקו את הלוח, החזיקו את BOOT לחוץ, חברו אותו שוב ואז שחררו.","اضغط <b>تثبيت</b> واختر اللوحة من القائمة. إذا لم ينجح ذلك: افصل اللوحة، واضغط مطولًا على BOOT، وأعد توصيلها، ثم اترك الزر.","Haz clic en <b>Instalar</b> y elige la placa de la lista. Si no funciona: desconecta la placa, mantén pulsado BOOT, vuelve a conectarla y suelta."],"Plug the micro:bit into the computer with a USB cable.":["חברו את המיקרוביט למחשב בכבל USB.","صِل المايكروبت بالحاسوب بكابل USB.","Conecta la micro:bit a la computadora con un cable USB."],"First time only: click <b>First-time setup</b> and put MicroPython on it.":["רק בפעם הראשונה: לחצו על <b>התקנה ראשונה</b> והעלו אליו MicroPython.","في المرة الأولى فقط: اضغط <b>الإعداد الأول</b> وضع عليه MicroPython.","Solo la primera vez: haz clic en <b>Primera configuración</b> y ponle MicroPython."],"Click <b>Connect micro:bit</b> and pick it from the list.":["לחצו על <b>חיבור למיקרוביט</b> ובחרו אותו מהרשימה.","اضغط <b>اتصال بالمايكروبت</b> واختره من القائمة.","Haz clic en <b>Conectar micro:bit</b> y elígela de la lista."],"Drag blocks and click <b>Run</b>. The result shows up on the LEDs.":["גררו בלוקים ולחצו על <b>הרצה</b>. התוצאה תופיע על הלדים.","اسحب الكتل واضغط <b>تشغيل</b>. ستظهر النتيجة على الأضواء.","Arrastra bloques y haz clic en <b>Ejecutar</b>. El resultado aparece en los LED."],"<b>Save to micro:bit</b> keeps your program, so it runs every time it turns on, even on batteries.":["<b>שמירה במיקרוביט</b> שומרת את התוכנית, כך שהיא תרוץ בכל פעם שהוא נדלק, גם על סוללות.","<b>حفظ في المايكروبت</b> يحفظ برنامجك، فيعمل كلما شغّلته، حتى على البطاريات.","<b>Guardar en la micro:bit</b> guarda tu programa para que funcione cada vez que se enciende, incluso con pilas."],"The LEDs":["הלדים","الأضواء","Los LED"],"There are 5 × 5 LEDs. <code>x</code> goes from 0 on the left to 4 on the right, and <code>y</code> from 0 at the top to 4 at the bottom. Brightness goes from 0 (off) to 9.":["יש 5 × 5 לדים. <code>x</code> הולך מ-0 משמאל עד 4 מימין, ו-<code>y</code> מ-0 למעלה עד 4 למטה. הבהירות היא מ-0 (כבוי) עד 9.","هناك 5 × 5 أضواء. يمتد <code>x</code> من 0 على اليسار إلى 4 على اليمين، و<code>y</code> من 0 في الأعلى إلى 4 في الأسفل. السطوع من 0 (مطفأ) إلى 9.","Hay 5 × 5 LED. <code>x</code> va de 0 a la izquierda a 4 a la derecha, y <code>y</code> de 0 arriba a 4 abajo. El brillo va de 0 (apagado) a 9."],"Blocks marked <b>V2</b> in their tooltip (logo, sound level, sounds, volume) need a micro:bit V2, the one with a gold logo and a speaker.":["בלוקים שבהסבר שלהם כתוב <b>V2</b> (לוגו, עוצמת קול, צלילים, ווליום) צריכים מיקרוביט V2, זה עם הלוגו המוזהב והרמקול.","الكتل التي يذكر شرحها <b>V2</b> (الشعار، مستوى الصوت، الأصوات، شدة الصوت) تحتاج مايكروبت V2، وهو الذي فيه شعار ذهبي وسماعة.","Los bloques con <b>V2</b> en su ayuda (logo, nivel de sonido, sonidos, volumen) necesitan una micro:bit V2, la que tiene un logo dorado y altavoz."],"The <b>compass</b> asks you to tilt the board and fill the LEDs the first time. That's normal.":["<b>המצפן</b> מבקש בפעם הראשונה להטות את הלוח ולמלא את הלדים. זה רגיל.","في المرة الأولى تطلب <b>البوصلة</b> منك إمالة اللوحة لملء الأضواء. هذا طبيعي.","La <b>brújula</b> te pide la primera vez que inclines la placa para llenar los LED. Es normal."],"<b>Radio</b>: micro:bits only hear each other when they use the same group number.":["<b>רדיו</b>: מיקרוביטים שומעים זה את זה רק כשהם באותו מספר קבוצה.","<b>الراديو</b>: أجهزة المايكروبت لا تسمع بعضها إلا إذا استخدمت رقم المجموعة نفسه.","<b>Radio</b>: las micro:bit solo se oyen entre sí cuando usan el mismo número de grupo."],"The <b>Colour screen</b> blocks are for the Waveshare 1.8 inch LCD for micro:bit (160 × 128). <code>x</code> goes from 0 to 159 and <code>y</code> from 0 to 127. The screen uses pins P1 and P2, so don't use those in the Pins blocks at the same time. It needs a micro:bit V2.":["הבלוקים של <b>מסך צבעוני</b> מיועדים למסך Waveshare 1.8 אינץ' למיקרוביט (160 × 128). <code>x</code> הולך מ-0 עד 159 ו-<code>y</code> מ-0 עד 127. המסך משתמש בפינים P1 ו-P2, אז אל תשתמשו בהם בבלוקים של פינים באותו זמן. צריך מיקרוביט V2.","كتل <b>الشاشة الملونة</b> مخصصة لشاشة Waveshare مقاس 1.8 بوصة للمايكروبت (160 × 128). يمتد <code>x</code> من 0 إلى 159 و<code>y</code> من 0 إلى 127. تستخدم الشاشة المنفذين P1 وP2، فلا تستخدمهما في كتل المنافذ في الوقت نفسه. تحتاج مايكروبت V2.","Los bloques de <b>Pantalla a color</b> son para la pantalla Waveshare LCD de 1,8 pulgadas para micro:bit (160 × 128). <code>x</code> va de 0 a 159 y <code>y</code> de 0 a 127. La pantalla usa los pines P1 y P2, así que no los uses a la vez en los bloques de Pines. Necesita una micro:bit V2."],"<b>Pins</b> P0, P1 and P2 are the big gold rings. They work with 3 V only. Always put a resistor in front of an LED.":["<b>הפינים</b> P0, P1 ו-P2 הם הטבעות המוזהבות הגדולות. הם עובדים רק עם 3 וולט. תמיד שימו נגד לפני נורת LED.","<b>المنافذ</b> P0 وP1 وP2 هي الحلقات الذهبية الكبيرة. تعمل بجهد 3 فولت فقط. ضع دائمًا مقاومة قبل مصباح LED.","Los <b>pines</b> P0, P1 y P2 son los anillos dorados grandes. Solo funcionan con 3 V. Pon siempre una resistencia delante de un LED."],"If the micro:bit stops responding: click <b>Stop</b>. If that doesn't help, press the reset button on the back and connect again.":["אם המיקרוביט מפסיק להגיב: לחצו על <b>עצירה</b>. אם זה לא עוזר, לחצו על כפתור האיפוס שמאחור והתחברו שוב.","إذا توقف المايكروبت عن الاستجابة: اضغط <b>إيقاف</b>. إذا لم ينفع ذلك، اضغط زر إعادة التشغيل في الخلف واتصل من جديد.","Si la micro:bit deja de responder: haz clic en <b>Detener</b>. Si no funciona, pulsa el botón de reinicio de atrás y vuelve a conectar."],"My pictures":["התמונות שלי","صوري","Mis imágenes"],"Add a picture from your computer to use as a character on the colour screen. It's shrunk to fit 32 × 32 pixels, and a plain background is removed.":["הוסיפו תמונה מהמחשב כדי להשתמש בה כדמות על המסך הצבעוני. היא מוקטנת ל-32 × 32 פיקסלים, ורקע בצבע אחיד מוסר.","أضف صورة من حاسوبك لتستخدمها كشخصية على الشاشة الملونة. تُصغَّر لتناسب 32 × 32 بكسل، وتُزال الخلفية ذات اللون الواحد.","Añade una imagen de tu computadora para usarla como personaje en la pantalla a color. Se reduce a 32 × 32 píxeles y se quita un fondo liso."],"Add a picture":["הוספת תמונה","إضافة صورة","Añadir imagen"],"No pictures yet. Add one, then use the <b>screen: draw picture</b> block.":["עדיין אין תמונות. הוסיפו תמונה ואז השתמשו בבלוק <b>מסך: צייר תמונה</b>.","لا توجد صور بعد. أضف صورة ثم استخدم الكتلة <b>الشاشة: ارسم صورة</b>.","Aún no hay imágenes. Añade una y luego usa el bloque <b>pantalla: dibujar imagen</b>."],"Put MicroPython on the micro:bit (first time only)":["העלאת MicroPython למיקרוביט (רק בפעם הראשונה)","وضع MicroPython على المايكروبت (في المرة الأولى فقط)","Poner MicroPython en la micro:bit (solo la primera vez)"],"You do this once for each micro:bit. It replaces whatever program was on it.":["עושים את זה פעם אחת לכל מיקרוביט. זה מחליף את התוכנית שהייתה עליו.","تقوم بهذا مرة واحدة لكل مايكروبت. سيحل محل أي برنامج كان عليه.","Se hace una vez por cada micro:bit. Reemplaza el programa que tuviera."],"Plug the micro:bit into the computer.":["חברו את המיקרוביט למחשב.","صِل المايكروبت بالحاسوب.","Conecta la micro:bit a la computadora."],"Open <a href=\"https://python.microbit.org\" target=\"_blank\" rel=\"noopener\">python.microbit.org</a> in Chrome or Edge.":["פתחו את <a href=\"https://python.microbit.org\" target=\"_blank\" rel=\"noopener\">python.microbit.org</a> בכרום או באדג'.","افتح <a href=\"https://python.microbit.org\" target=\"_blank\" rel=\"noopener\">python.microbit.org</a> في Chrome أو Edge.","Abre <a href=\"https://python.microbit.org\" target=\"_blank\" rel=\"noopener\">python.microbit.org</a> en Chrome o Edge."],"Click <b>Send to micro:bit</b> and follow the steps. This puts MicroPython on it.":["לחצו על <b>Send to micro:bit</b> ועקבו אחרי השלבים. כך עולה אליו MicroPython.","اضغط <b>Send to micro:bit</b> واتبع الخطوات. هكذا يوضع عليه MicroPython.","Haz clic en <b>Send to micro:bit</b> y sigue los pasos. Así se le pone MicroPython."],"Close that tab, come back here and click <b>Connect micro:bit</b>.":["סגרו את הלשונית, חזרו לכאן ולחצו על <b>חיבור למיקרוביט</b>.","أغلق تلك الصفحة، وارجع إلى هنا واضغط <b>اتصال بالمايكروبت</b>.","Cierra esa pestaña, vuelve aquí y haz clic en <b>Conectar micro:bit</b>."],"Already used python.microbit.org with this micro:bit? Then it's ready, and you can skip this.":["כבר השתמשתם ב-python.microbit.org עם המיקרוביט הזה? אז הוא מוכן ואפשר לדלג על זה.","هل استخدمت python.microbit.org مع هذا المايكروبت من قبل؟ إذن هو جاهز ويمكنك تخطي هذا.","¿Ya usaste python.microbit.org con esta micro:bit? Entonces está lista y puedes saltarte esto."],"The block editor didn't load":["עורך הבלוקים לא נטען","لم يتم تحميل محرر الكتل","El editor de bloques no se cargó"],"The app needs an internet connection to load the block editor.":["האפליקציה צריכה חיבור לאינטרנט כדי לטעון את עורך הבלוקים.","يحتاج التطبيق إلى اتصال بالإنترنت لتحميل محرر الكتل.","La aplicación necesita conexión a internet para cargar el editor de bloques."],"Check that you're online. On a school computer, the network may be blocking <code>cdn.jsdelivr.net</code> and <code>unpkg.com</code>. Ask the IT team to allow them.":["בדקו שיש חיבור לאינטרנט. במחשב בית ספרי ייתכן שהרשת חוסמת את <code>cdn.jsdelivr.net</code> ו-<code>unpkg.com</code>. בקשו מצוות המחשוב לאשר אותם.","تأكد من اتصالك بالإنترنت. في حاسوب المدرسة قد تحجب الشبكة <code>cdn.jsdelivr.net</code> و<code>unpkg.com</code>. اطلب من فريق تقنية المعلومات السماح بهما.","Comprueba que tienes conexión. En una computadora del colegio, la red puede estar bloqueando <code>cdn.jsdelivr.net</code> y <code>unpkg.com</code>. Pide al equipo de informática que los permita."],"black":["שחור","أسود","negro"],"white":["לבן","أبيض","blanco"],"red":["אדום","أحمر","rojo"],"green":["ירוק","أخضر","verde"],"blue":["כחול","أزرق","azul"],"yellow":["צהוב","أصفر","amarillo"],"orange":["כתום","برتقالي","naranja"],"purple":["סגול","بنفسجي","morado"],"pink":["ורוד","وردي","rosa"],"cyan":["תכלת","سماوي","cian"],"gray":["אפור","رمادي","gris"],"brown":["חום","بني","marrón"],"dog":["כלב","كلب","perro"],"cat":["חתול","قطة","gato"],"crocodile":["תנין","تمساح","cocodrilo"],"rabbit":["ארנב","أرنب","conejo"],"bear":["דוב","دب","oso"],"frog":["צפרדע","ضفدع","rana"],"fish":["דג","سمكة","pez"],"bird":["ציפור","طائر","pájaro"],"turtle":["צב","سلحفاة","tortuga"],"star":["כוכב","نجمة","estrella"],"heart":["לב","قلب","corazón"],"triangle":["משולש","مثلث","triángulo"],"square":["ריבוע","مربع","cuadrado"],"diamond":["מעוין","معيّن","rombo"],"pentagon":["מחומש","خماسي","pentágono"],"hexagon":["משושה","سداسي","hexágono"],"octagon":["מתומן","ثماني","octógono"],"Pick a colour":["בחירת צבע","اختر لونًا","Elige un color"],"colour: red %1 green %2 blue %3":["צבע: אדום %1 ירוק %2 כחול %3","لون: أحمر %1 أخضر %2 أزرق %3","color: rojo %1 verde %2 azul %3"],"Mix your own colour. Each number goes from 0 to 255":["ערבבו צבע משלכם. כל מספר הוא מ-0 עד 255","اخلط لونك الخاص. كل رقم من 0 إلى 255","Mezcla tu propio color. Cada número va de 0 a 255"],"random colour":["צבע אקראי","لون عشوائي","color al azar"],"A different colour every time":["צבע אחר בכל פעם","لون مختلف في كل مرة","Un color distinto cada vez"],"fill screen with %1":["מלא את המסך בצבע %1","املأ الشاشة بـ %1","rellenar pantalla con %1"],"Paints the whole screen one colour":["צובע את כל המסך בצבע אחד","يلوّن الشاشة كلها بلون واحد","Pinta toda la pantalla de un color"],"write %1 at x %2 y %3 size %4 colour %5":["כתוב %1 במיקום x %2 y %3 גודל %4 צבע %5","اكتب %1 عند x %2 y %3 الحجم %4 اللون %5","escribir %1 en x %2 y %3 tamaño %4 color %5"],"Writes text or a number on the screen":["כותב טקסט או מספר על המסך","يكتب نصًا أو رقمًا على الشاشة","Escribe un texto o un número en la pantalla"],"draw %1 at x %2 y %3 size %4 colour %5":["צייר %1 במיקום x %2 y %3 גודל %4 צבע %5","ارسم %1 عند x %2 y %3 الحجم %4 اللون %5","dibujar %1 en x %2 y %3 tamaño %4 color %5"],"Draws a shape or an animal. x,y is its centre and size is how wide it is. Animals use the colour for their body.":["מצייר צורה או חיה. x,y הוא המרכז שלה והגודל הוא הרוחב שלה. לחיות הצבע הוא צבע הגוף.","يرسم شكلًا أو حيوانًا. x,y هو مركزه والحجم هو عرضه. تأخذ الحيوانات اللون لجسمها.","Dibuja una forma o un animal. x,y es su centro y el tamaño es su ancho. Los animales usan el color para el cuerpo."],"Draws a shape or an animal. x,y is its centre and size is how wide it is. Animals use the colour for their body":["מצייר צורה או חיה. x,y הוא המרכז שלה והגודל הוא הרוחב שלה. לחיות הצבע הוא צבע הגוף","يرسم شكلًا أو حيوانًا. x,y هو مركزه والحجم هو عرضه. تأخذ الحيوانات اللون لجسمها","Dibuja una forma o un animal. x,y es su centro y el tamaño es su ancho. Los animales usan el color para el cuerpo"],"rectangle x %1 y %2 width %3 height %4 colour %5 filled %6":["מלבן x %1 y %2 רוחב %3 גובה %4 צבע %5 מלא %6","مستطيل x %1 y %2 العرض %3 الارتفاع %4 اللون %5 مملوء %6","rectángulo x %1 y %2 ancho %3 alto %4 color %5 relleno %6"],"Draws a rectangle. x,y is its top-left corner":["מצייר מלבן. x,y היא הפינה השמאלית העליונה שלו","يرسم مستطيلًا. x,y هي زاويته العليا اليسرى","Dibuja un rectángulo. x,y es su esquina superior izquierda"],"circle at x %1 y %2 radius %3 colour %4 filled %5":["עיגול במיקום x %1 y %2 רדיוס %3 צבע %4 מלא %5","دائرة عند x %1 y %2 نصف القطر %3 اللون %4 مملوءة %5","círculo en x %1 y %2 radio %3 color %4 relleno %5"],"Draws a circle around its centre point":["מצייר עיגול סביב נקודת המרכז שלו","يرسم دائرة حول نقطة مركزها","Dibuja un círculo alrededor de su punto central"],"line from x %1 y %2 to x %3 y %4 colour %5":["קו מנקודה x %1 y %2 עד נקודה x %3 y %4 צבע %5","خط من x %1 y %2 إلى x %3 y %4 اللون %5","línea de x %1 y %2 a x %3 y %4 color %5"],"Draws a straight line between two points":["מצייר קו ישר בין שתי נקודות","يرسم خطًا مستقيمًا بين نقطتين","Dibuja una línea recta entre dos puntos"],"dot at x %1 y %2 colour %3":["נקודה במיקום x %1 y %2 צבע %3","نقطة عند x %1 y %2 اللون %3","punto en x %1 y %2 color %3"],"Colours a single pixel":["צובע פיקסל אחד","يلوّن بكسلًا واحدًا","Colorea un solo píxel"],"screen brightness %1 %":["בהירות המסך %1 %","سطوع الشاشة %1 %","brillo de pantalla %1 %"],"0 = off, 100 = brightest":["0 = כבוי, 100 = הכי בהיר","0 = مطفأ، 100 = الأكثر سطوعًا","0 = apagado, 100 = lo más brillante"],"BOOT button pressed?":["כפתור BOOT לחוץ?","هل زر BOOT مضغوط؟","¿botón BOOT pulsado?"],"True while the button is held down":["אמת כל עוד הכפתור לחוץ","صحيح ما دام الزر مضغوطًا","Verdadero mientras el botón está pulsado"],"wait for BOOT press":["חכה ללחיצה על BOOT","انتظر ضغط BOOT","esperar a que se pulse BOOT"],"The program waits until the button is pressed and let go":["התוכנית מחכה עד שלוחצים על הכפתור ומשחררים","ينتظر البرنامج حتى يُضغط الزر ثم يُترك","El programa espera hasta que se pulse y se suelte el botón"],"tilt %1 (degrees)":["הטיה %1 (מעלות)","الميل %1 (درجات)","inclinación %1 (grados)"],"left-right":["שמאל-ימין","يسار-يمين","izquierda-derecha"],"forward-back":["קדימה-אחורה","أمام-خلف","adelante-atrás"],"How far the board is tilted, from about -90 to 90":["כמה הלוח מוטה, בערך מ-‎-90 עד 90","مقدار ميل اللوحة، من نحو ‎-90 إلى 90","Cuánto está inclinada la placa, de unos -90 a 90"],"board shaken?":["הלוח נוער?","هل هُزّت اللوحة؟","¿placa agitada?"],"True when you shake the board hard":["אמת כשמנערים את הלוח חזק","صحيح عندما تهز اللوحة بقوة","Verdadero cuando agitas la placa con fuerza"],"rotation speed %1 (degrees per second)":["מהירות סיבוב %1 (מעלות לשנייה)","سرعة الدوران %1 (درجة في الثانية)","velocidad de giro %1 (grados por segundo)"],"around z (spin flat)":["סביב z (סיבוב על השולחן)","حول z (دوران مسطح)","alrededor de z (girar en plano)"],"around x":["סביב x","حول x","alrededor de x"],"around y":["סביב y","حول y","alrededor de y"],"How fast the board is turning. 0 when it is still":["כמה מהר הלוח מסתובב. 0 כשהוא עומד במקום","مدى سرعة دوران اللوحة. 0 عندما تكون ساكنة","Qué tan rápido gira la placa. 0 cuando está quieta"],"temperature °C":["טמפרטורה ‎°C","درجة الحرارة ‎°C","temperatura °C"],"Temperature from the motion chip. It reads a little warmer than the room":["טמפרטורה מחיישן התנועה. היא קצת יותר חמה מהחדר","درجة الحرارة من شريحة الحركة. تكون أدفأ قليلًا من الغرفة","Temperatura del chip de movimiento. Marca un poco más que la habitación"],"SD card: add line %1 to file %2":["כרטיס SD: הוסף שורה %1 לקובץ %2","بطاقة SD: أضف السطر %1 إلى الملف %2","tarjeta SD: añadir línea %1 al archivo %2"],"Adds one line to the end of a file on the SD card":["מוסיף שורה אחת לסוף קובץ בכרטיס ה-SD","يضيف سطرًا واحدًا إلى نهاية ملف على بطاقة SD","Añade una línea al final de un archivo de la tarjeta SD"],"SD card: read file %1":["כרטיס SD: קרא את הקובץ %1","بطاقة SD: اقرأ الملف %1","tarjeta SD: leer archivo %1"],"Everything written in the file, as text":["כל מה שכתוב בקובץ, כטקסט","كل ما هو مكتوب في الملف، كنص","Todo lo escrito en el archivo, como texto"],"SD card: delete file %1":["כרטיס SD: מחק את הקובץ %1","بطاقة SD: احذف الملف %1","tarjeta SD: borrar archivo %1"],"Removes the file so you can start fresh":["מוחק את הקובץ כדי להתחיל מחדש","يحذف الملف لتبدأ من جديد","Borra el archivo para empezar de cero"],"set pin %1 %2":["קבע פין %1 %2","اضبط المنفذ %1 %2","poner pin %1 %2"],"on":["דולק","تشغيل","encendido"],"off":["כבוי","إطفاء","apagado"],"Turns a side pin on (3.3 V) or off. Good for an LED with a resistor":["מדליק (3.3 וולט) או מכבה פין בצד. טוב לנורת LED עם נגד","يشغّل منفذًا جانبيًا (3.3 فولت) أو يطفئه. مناسب لمصباح LED مع مقاومة","Enciende (3,3 V) o apaga un pin lateral. Sirve para un LED con resistencia"],"pin %1 is on?":["פין %1 דולק?","هل المنفذ %1 مشغّل؟","¿pin %1 encendido?"],"True when the pin gets 3.3 V, for example from a button wired to 3V3":["אמת כשהפין מקבל 3.3 וולט, למשל מכפתור שמחובר ל-3V3","صحيح عندما يصل إلى المنفذ 3.3 فولت، مثلًا من زر موصول بـ 3V3","Verdadero cuando el pin recibe 3,3 V, por ejemplo de un botón conectado a 3V3"],"analog pin %1 (0 to 100)":["פין אנלוגי %1 (0 עד 100)","منفذ تناظري %1 (0 إلى 100)","pin analógico %1 (0 a 100)"],"Reads a sensor like a light sensor or knob. 0 = 0 V, 100 = 3.3 V":["קורא חיישן כמו חיישן אור או כפתור סיבובי. 0 = 0 וולט, 100 = 3.3 וולט","يقرأ مستشعرًا مثل مستشعر الضوء أو المقبض. 0 = 0 فولت، 100 = 3.3 فولت","Lee un sensor, como uno de luz o una perilla. 0 = 0 V, 100 = 3,3 V"],"play tone %1 Hz for %2 seconds on pin %3":["נגן צליל %1 הרץ למשך %2 שניות בפין %3","شغّل نغمة %1 هرتز لمدة %2 ثانية على المنفذ %3","tocar tono de %1 Hz durante %2 segundos en el pin %3"],"Makes a sound on a buzzer connected to the pin":["משמיע צליל בזמזם שמחובר לפין","يصدر صوتًا من طنّان موصول بالمنفذ","Hace sonar un zumbador conectado al pin"],"wait %1 seconds":["חכה %1 שניות","انتظر %1 ثانية","esperar %1 segundos"],"Pauses before the next block":["עוצר לפני הבלוק הבא","يتوقف قليلًا قبل الكتلة التالية","Hace una pausa antes del siguiente bloque"],"repeat forever":["חזור לנצח","كرّر إلى الأبد","repetir siempre"],"The blocks inside run again and again until you click Stop":["הבלוקים שבפנים רצים שוב ושוב עד שלוחצים על עצירה","تعمل الكتل التي بالداخل مرارًا حتى تضغط إيقاف","Los bloques de dentro se repiten una y otra vez hasta que hagas clic en Detener"],"Screen":["מסך","الشاشة","Pantalla"],"Colours":["צבעים","الألوان","Colores"],"Sensors":["חיישנים","المستشعرات","Sensores"],"SD card":["כרטיס SD","بطاقة SD","Tarjeta SD"],"Pins":["פינים","المنافذ","Pines"],"Time & loops":["זמן ולולאות","الوقت والتكرار","Tiempo y bucles"],"Logic":["לוגיקה","المنطق","Lógica"],"Math":["חשבון","الرياضيات","Matemáticas"],"Text":["טקסט","النص","Texto"],"Variables":["משתנים","المتغيرات","Variables"],"LEDs":["לדים","الأضواء","LED"],"Colour screen":["מסך צבעוני","الشاشة الملونة","Pantalla a color"],"Music":["מוזיקה","الموسيقى","Música"],"Radio":["רדיו","الراديو","Radio"],"＋ Add a picture from your computer":["＋ הוספת תמונה מהמחשב","＋ إضافة صورة من حاسوبك","＋ Añadir una imagen de tu computadora"],"Live graph":["גרף חי","رسم بياني مباشر","Gráfico en vivo"],"Hello world":["שלום עולם","مرحبا يا عالم","Hola mundo"],"Colour bubbles":["בועות צבעוניות","فقاعات ملونة","Burbujas de colores"],"Tilt meter":["מד הטיה","مقياس الميل","Medidor de inclinación"],"Zoo":["גן חיות","حديقة الحيوان","Zoológico"],"Thermometer":["מדחום","ميزان الحرارة","Termómetro"],"Magic button":["כפתור קסם","الزر السحري","Botón mágico"],"Beating heart":["לב פועם","قلب نابض","Corazón que late"],"Dice":["קובייה","حجر النرد","Dado"],"Buttons":["כפתורים","الأزرار","Botones"],"Light graph":["גרף אור","رسم بياني للضوء","Gráfico de luz"],"Tilt graph":["גרף הטיה","رسم بياني للميل","Gráfico de inclinación"],"Compass":["מצפן","البوصلة","Brújula"],"Radio chat":["צ'אט ברדיו","دردشة بالراديو","Chat por radio"],"show icon %1":["הצג סמל %1","اعرض الرمز %1","mostrar icono %1"],"heart small":["לב קטן","قلب صغير","corazón pequeño"],"happy":["שמח","سعيد","feliz"],"smile":["חיוך","ابتسامة","sonrisa"],"sad":["עצוב","حزين","triste"],"confused":["מבולבל","حائر","confundido"],"angry":["כועס","غاضب","enfadado"],"asleep":["ישן","نائم","dormido"],"surprised":["מופתע","متفاجئ","sorprendido"],"silly":["מצחיק","مضحك","tonto"],"fabulous":["מדהים","رائع","fabuloso"],"meh":["ככה-ככה","عادي","meh"],"yes":["כן","نعم","sí"],"no":["לא","لا","no"],"arrow n":["חץ למעלה","سهم للأعلى","flecha arriba"],"arrow e":["חץ ימינה","سهم لليمين","flecha derecha"],"arrow s":["חץ למטה","سهم للأسفل","flecha abajo"],"arrow w":["חץ שמאלה","سهم لليسار","flecha izquierda"],"chessboard":["לוח שחמט","رقعة شطرنج","tablero de ajedrez"],"target":["מטרה","هدف","diana"],"cow":["פרה","بقرة","vaca"],"duck":["ברווז","بطة","pato"],"tortoise":["צב יבשה","سلحفاة برية","tortuga de tierra"],"butterfly":["פרפר","فراشة","mariposa"],"giraffe":["ג'ירפה","زرافة","jirafa"],"snake":["נחש","ثعبان","serpiente"],"ghost":["רוח רפאים","شبح","fantasma"],"skull":["גולגולת","جمجمة","calavera"],"house":["בית","بيت","casa"],"umbrella":["מטרייה","مظلة","paraguas"],"music quaver":["תו מוזיקלי","نوتة موسيقية","nota musical"],"pacman":["פקמן","باك مان","pacman"],"sword":["חרב","سيف","espada"],"tshirt":["חולצה","قميص","camiseta"],"stickfigure":["איש מקלות","رجل من عيدان","monigote"],"xmas":["עץ חג","شجرة العيد","árbol de Navidad"],"Shows a built-in picture on the 5×5 LEDs":["מציג תמונה מוכנה על 5×5 הלדים","يعرض صورة جاهزة على أضواء 5×5","Muestra una imagen incorporada en los LED de 5×5"],"Tick the LEDs you want on, then the picture shows on the micro:bit":["סמנו את הלדים שאתם רוצים שיידלקו, והתמונה תופיע על המיקרוביט","اختر الأضواء التي تريد إضاءتها، فتظهر الصورة على المايكروبت","Marca los LED que quieres encender y la imagen aparece en la micro:bit"],"draw a picture":["צייר תמונה","ارسم صورة","dibujar una imagen"],"scroll %1":["גלול %1","مرّر %1","desplazar %1"],"Slides text or a number across the LEDs":["מעביר טקסט או מספר לאורך הלדים","يمرّر نصًا أو رقمًا عبر الأضواء","Hace pasar un texto o un número por los LED"],"LED x %1 y %2 brightness %3":["לד x %1 y %2 בהירות %3","ضوء x %1 y %2 السطوع %3","LED x %1 y %2 brillo %3"],"x and y go from 0 to 4. Brightness goes from 0 (off) to 9 (brightest)":["x ו-y הם מ-0 עד 4. הבהירות היא מ-0 (כבוי) עד 9 (הכי בהיר)","x وy من 0 إلى 4. السطوع من 0 (مطفأ) إلى 9 (الأكثر سطوعًا)","x e y van de 0 a 4. El brillo va de 0 (apagado) a 9 (lo más brillante)"],"clear LEDs":["כבה את הלדים","أطفئ الأضواء","borrar LED"],"Turns every LED off":["מכבה את כל הלדים","يطفئ كل الأضواء","Apaga todos los LED"],"button %1 is pressed?":["כפתור %1 לחוץ?","هل الزر %1 مضغوط؟","¿botón %1 pulsado?"],"button %1 was pressed?":["כפתור %1 נלחץ?","هل ضُغط الزر %1؟","¿se pulsó el botón %1?"],"True if the button was pressed since the last time you asked. Good for counting presses":["אמת אם הכפתור נלחץ מאז הפעם הקודמת ששאלתם. טוב לספירת לחיצות","صحيح إذا ضُغط الزر منذ آخر مرة سألت. مناسب لعدّ الضغطات","Verdadero si se pulsó el botón desde la última vez que preguntaste. Sirve para contar pulsaciones"],"logo touched?":["נגעו בלוגו?","هل لُمس الشعار؟","¿logo tocado?"],"True when you touch the gold logo (micro:bit V2)":["אמת כשנוגעים בלוגו המוזהב (מיקרוביט V2)","صحيح عندما تلمس الشعار الذهبي (مايكروبت V2)","Verdadero cuando tocas el logo dorado (micro:bit V2)"],"gesture is %1?":["התנועה היא %1?","هل الحركة %1؟","¿el gesto es %1?"],"shake":["ניעור","هزّ","agitar"],"face up":["פנים למעלה","الوجه للأعلى","boca arriba"],"face down":["פנים למטה","الوجه للأسفل","boca abajo"],"tilt left":["הטיה שמאלה","ميل لليسار","inclinar a la izquierda"],"tilt right":["הטיה ימינה","ميل لليمين","inclinar a la derecha"],"logo up":["לוגו למעלה","الشعار للأعلى","logo arriba"],"logo down":["לוגו למטה","الشعار للأسفل","logo abajo"],"free fall":["נפילה חופשית","سقوط حر","caída libre"],"Checks how the micro:bit is being held or moved":["בודק איך מחזיקים או מזיזים את המיקרוביט","يتحقق من طريقة إمساك المايكروبت أو تحريكه","Comprueba cómo se sostiene o se mueve la micro:bit"],"acceleration %1 (mg)":["תאוצה %1 (mg)","التسارع %1 (mg)","aceleración %1 (mg)"],"Tilt and movement. About -1024 to 1024 when you tilt the board":["הטיה ותנועה. בערך מ-‎-1024 עד 1024 כשמטים את הלוח","الميل والحركة. من نحو ‎-1024 إلى 1024 عندما تميل اللوحة","Inclinación y movimiento. De unos -1024 a 1024 al inclinar la placa"],"light level (0 to 255)":["עוצמת אור (0 עד 255)","مستوى الضوء (0 إلى 255)","nivel de luz (0 a 255)"],"How bright it is, measured by the LEDs":["כמה מואר מסביב, נמדד בעזרת הלדים","مدى الإضاءة، تقيسها الأضواء","Cuánta luz hay, medida por los LED"],"Temperature of the processor, close to the room temperature":["הטמפרטורה של המעבד, קרובה לטמפרטורת החדר","درجة حرارة المعالج، قريبة من حرارة الغرفة","Temperatura del procesador, parecida a la de la habitación"],"compass heading (0 to 359)":["כיוון מצפן (0 עד 359)","اتجاه البوصلة (0 إلى 359)","rumbo de la brújula (0 a 359)"],"Which way the micro:bit points. 0 is north. The first time, it asks you to tilt the board to fill the screen":["לאן המיקרוביט מצביע. 0 הוא צפון. בפעם הראשונה הוא מבקש להטות את הלוח כדי למלא את המסך","إلى أين يشير المايكروبت. 0 هو الشمال. في المرة الأولى يطلب منك إمالة اللوحة لملء الشاشة","Hacia dónde apunta la micro:bit. 0 es el norte. La primera vez te pide que inclines la placa para llenar la pantalla"],"sound level (0 to 255)":["עוצמת קול (0 עד 255)","مستوى الصوت (0 إلى 255)","nivel de sonido (0 a 255)"],"How loud it is around the microphone (micro:bit V2)":["כמה רועש ליד המיקרופון (מיקרוביט V2)","مدى ارتفاع الصوت حول الميكروفون (مايكروبت V2)","Cuánto ruido hay cerca del micrófono (micro:bit V2)"],"play melody %1":["נגן מנגינה %1","شغّل اللحن %1","tocar melodía %1"],"birthday":["יום הולדת","عيد ميلاد","cumpleaños"],"power up":["עלייה","صعود","encendido"],"power down":["ירידה","هبوط","apagado"],"jump up":["קפיצה למעלה","قفزة للأعلى","salto arriba"],"jump down":["קפיצה למטה","قفزة للأسفل","salto abajo"],"ba ding":["בה-דינג","با دينغ","ba ding"],"wawawawaa":["וואוואוואה","واواواوا","wawawawaa"],"ringtone":["צלצול","نغمة رنين","tono de llamada"],"entertainer":["הבדרן","المُسلّي","el animador"],"ode":["אודה לשמחה","نشيد الفرح","oda a la alegría"],"nyan":["ניאן","نيان","nyan"],"funk":["פאנק","فانك","funk"],"blues":["בלוז","بلوز","blues"],"wedding":["חתונה","زفاف","boda"],"punchline":["פואנטה","خاتمة النكتة","remate"],"chase":["מרדף","مطاردة","persecución"],"baddy":["הנבל","الشرير","el malo"],"dadadadum":["דה-דה-דה-דום","دا دا دا دوم","dadadadum"],"Plays a built-in tune and waits until it ends":["מנגן מנגינה מוכנה ומחכה שתסתיים","يشغّل لحنًا جاهزًا وينتظر حتى ينتهي","Toca una melodía incorporada y espera a que termine"],"play tone %1 Hz for %2 seconds":["נגן צליל %1 הרץ למשך %2 שניות","شغّل نغمة %1 هرتز لمدة %2 ثانية","tocar tono de %1 Hz durante %2 segundos"],"440 Hz is the note A. Higher numbers make higher notes":["‏440 הרץ הוא התו לה. מספרים גבוהים יותר נותנים צלילים גבוהים יותר","‏440 هرتز هي النوتة لا. الأرقام الأعلى تعطي نوتات أعلى","440 Hz es la nota la. Números más altos dan notas más agudas"],"play sound %1":["השמע צליל %1","شغّل الصوت %1","reproducir sonido %1"],"hello":["שלום","مرحبا","hola"],"giggle":["צחקוק","ضحكة","risita"],"twinkle":["נצנוץ","تلألؤ","destello"],"soaring":["המראה","تحليق","vuelo"],"spring":["קפיץ","زنبرك","muelle"],"slide":["החלקה","انزلاق","deslizar"],"mysterious":["מסתורי","غامض","misterioso"],"yawn":["פיהוק","تثاؤب","bostezo"],"Plays an expressive sound on the speaker (micro:bit V2)":["משמיע צליל מבטא ברמקול (מיקרוביט V2)","يشغّل صوتًا معبّرًا من السماعة (مايكروبت V2)","Reproduce un sonido expresivo por el altavoz (micro:bit V2)"],"set volume %1 (0 to 255)":["קבע עוצמת שמע %1 (0 עד 255)","اضبط شدة الصوت %1 (0 إلى 255)","poner volumen %1 (0 a 255)"],"How loud the speaker plays (micro:bit V2)":["כמה חזק הרמקול מנגן (מיקרוביט V2)","مدى ارتفاع صوت السماعة (مايكروبت V2)","Qué tan fuerte suena el altavoz (micro:bit V2)"],"radio group %1":["קבוצת רדיו %1","مجموعة الراديو %1","grupo de radio %1"],"Pick a group from 0 to 255. Only micro:bits in the same group hear each other":["בחרו קבוצה מ-0 עד 255. רק מיקרוביטים באותה קבוצה שומעים זה את זה","اختر مجموعة من 0 إلى 255. فقط أجهزة المايكروبت في المجموعة نفسها تسمع بعضها","Elige un grupo de 0 a 255. Solo las micro:bit del mismo grupo se oyen entre sí"],"radio send %1":["שלח ברדיו %1","أرسل بالراديو %1","radio enviar %1"],"Sends a message to other micro:bits nearby":["שולח הודעה למיקרוביטים אחרים בסביבה","يرسل رسالة إلى أجهزة مايكروبت أخرى قريبة","Envía un mensaje a otras micro:bit cercanas"],"radio message received":["הודעת רדיו שהתקבלה","رسالة الراديو المستلمة","mensaje de radio recibido"],"The next message from another micro:bit, or empty text if nothing arrived":["ההודעה הבאה ממיקרוביט אחר, או טקסט ריק אם לא הגיע כלום","الرسالة التالية من مايكروبت آخر، أو نص فارغ إذا لم يصل شيء","El siguiente mensaje de otra micro:bit, o texto vacío si no llegó nada"],"Turns a gold pin on (3 V) or off. Good for an LED with a resistor":["מדליק (3 וולט) או מכבה פין מוזהב. טוב לנורת LED עם נגד","يشغّل منفذًا ذهبيًا (3 فولت) أو يطفئه. مناسب لمصباح LED مع مقاومة","Enciende (3 V) o apaga un pin dorado. Sirve para un LED con resistencia"],"True when the pin gets 3 V":["אמת כשהפין מקבל 3 וולט","صحيح عندما يصل إلى المنفذ 3 فولت","Verdadero cuando el pin recibe 3 V"],"analog pin %1 (0 to 1023)":["פין אנלוגי %1 (0 עד 1023)","منفذ تناظري %1 (0 إلى 1023)","pin analógico %1 (0 a 1023)"],"Reads a sensor like a light sensor or knob":["קורא חיישן כמו חיישן אור או כפתור סיבובי","يقرأ مستشعرًا مثل مستشعر الضوء أو المقبض","Lee un sensor, como uno de luz o una perilla"],"pin %1 touched?":["נגעו בפין %1?","هل لُمس المنفذ %1؟","¿pin %1 tocado?"],"Hold GND with one hand and touch the pin with the other":["החזיקו את GND ביד אחת וגעו בפין ביד השנייה","أمسك GND بيد والمس المنفذ باليد الأخرى","Sujeta GND con una mano y toca el pin con la otra"],"screen: fill with %1":["מסך: מלא בצבע %1","الشاشة: املأ بـ %1","pantalla: rellenar con %1"],"Paints the whole colour screen one colour":["צובע את כל המסך הצבעוני בצבע אחד","يلوّن الشاشة الملونة كلها بلون واحد","Pinta toda la pantalla a color de un color"],"screen: write %1 at x %2 y %3 size %4 colour %5":["מסך: כתוב %1 במיקום x %2 y %3 גודל %4 צבע %5","الشاشة: اكتب %1 عند x %2 y %3 الحجم %4 اللون %5","pantalla: escribir %1 en x %2 y %3 tamaño %4 color %5"],"Writes text or a number with the micro:bit letters":["כותב טקסט או מספר באותיות של המיקרוביט","يكتب نصًا أو رقمًا بحروف المايكروبت","Escribe un texto o un número con las letras de la micro:bit"],"screen: draw %1 at x %2 y %3 size %4 colour %5":["מסך: צייר %1 במיקום x %2 y %3 גודל %4 צבע %5","الشاشة: ارسم %1 عند x %2 y %3 الحجم %4 اللون %5","pantalla: dibujar %1 en x %2 y %3 tamaño %4 color %5"],"screen: draw icon %1 at x %2 y %3 size %4 colour %5":["מסך: צייר סמל %1 במיקום x %2 y %3 גודל %4 צבע %5","الشاشة: ارسم الرمز %1 عند x %2 y %3 الحجم %4 اللون %5","pantalla: dibujar icono %1 en x %2 y %3 tamaño %4 color %5"],"Draws a micro:bit picture big on the colour screen":["מצייר תמונת מיקרוביט בגדול על המסך הצבעוני","يرسم صورة مايكروبت كبيرة على الشاشة الملونة","Dibuja una imagen de micro:bit en grande en la pantalla a color"],"screen: rectangle x %1 y %2 width %3 height %4 colour %5 filled %6":["מסך: מלבן x %1 y %2 רוחב %3 גובה %4 צבע %5 מלא %6","الشاشة: مستطيل x %1 y %2 العرض %3 الارتفاع %4 اللون %5 مملوء %6","pantalla: rectángulo x %1 y %2 ancho %3 alto %4 color %5 relleno %6"],"x,y is the top-left corner":["x,y היא הפינה השמאלית העליונה","x,y هي الزاوية العليا اليسرى","x,y es la esquina superior izquierda"],"screen: circle at x %1 y %2 radius %3 colour %4 filled %5":["מסך: עיגול במיקום x %1 y %2 רדיוס %3 צבע %4 מלא %5","الشاشة: دائرة عند x %1 y %2 نصف القطر %3 اللون %4 مملوءة %5","pantalla: círculo en x %1 y %2 radio %3 color %4 relleno %5"],"screen: line from x %1 y %2 to x %3 y %4 colour %5":["מסך: קו מנקודה x %1 y %2 עד נקודה x %3 y %4 צבע %5","الشاشة: خط من x %1 y %2 إلى x %3 y %4 اللون %5","pantalla: línea de x %1 y %2 a x %3 y %4 color %5"],"screen: dot at x %1 y %2 colour %3":["מסך: נקודה במיקום x %1 y %2 צבע %3","الشاشة: نقطة عند x %1 y %2 اللون %3","pantalla: punto en x %1 y %2 color %3"],"screen: graph %1 colour %2":["מסך: גרף %1 צבע %2","الشاشة: رسم بياني %1 اللون %2","pantalla: gráfico %1 color %2"],"Adds one point to a live graph. Plug in any sensor. Use a different colour for each sensor to show several lines. Plug in compass heading to get a compass instead":["מוסיף נקודה לגרף חי. חברו כל חיישן. השתמשו בצבע אחר לכל חיישן כדי להציג כמה קווים. חברו את כיוון המצפן כדי לקבל מצפן במקום גרף","يضيف نقطة إلى رسم بياني مباشر. صِل أي مستشعر. استخدم لونًا مختلفًا لكل مستشعر لعرض عدة خطوط. صِل اتجاه البوصلة لتحصل على بوصلة بدلًا منه","Añade un punto a un gráfico en vivo. Conecta cualquier sensor. Usa un color distinto para cada sensor y verás varias líneas. Conecta el rumbo de la brújula para obtener una brújula"],"screen: start graph from %1 to %2 title %3":["מסך: התחל גרף מ-%1 עד %2 כותרת %3","الشاشة: ابدأ رسمًا بيانيًا من %1 إلى %2 العنوان %3","pantalla: empezar gráfico de %1 a %2 título %3"],"Optional. Sets the lowest and highest value and a title. Without it, the graph picks its range by itself":["לא חובה. קובע את הערך הנמוך והגבוה ביותר וכותרת. בלעדיו הגרף בוחר את הטווח בעצמו","اختياري. يحدد أدنى قيمة وأعلى قيمة وعنوانًا. من دونه يختار الرسم البياني مداه بنفسه","Opcional. Fija el valor más bajo, el más alto y un título. Sin él, el gráfico elige su rango solo"],"screen: brightness %1 %":["מסך: בהירות %1 %","الشاشة: السطوع %1 %","pantalla: brillo %1 %"],"screen: draw picture %1 at x %2 y %3 size %4":["מסך: צייר תמונה %1 במיקום x %2 y %3 גודל %4","الشاشة: ارسم الصورة %1 عند x %2 y %3 الحجم %4","pantalla: dibujar imagen %1 en x %2 y %3 tamaño %4"],"Draws a picture you added from your computer. x,y is its centre and size is how wide it is":["מצייר תמונה שהוספתם מהמחשב. x,y הוא המרכז שלה והגודל הוא הרוחב שלה","يرسم صورة أضفتها من حاسوبك. x,y هو مركزها والحجم هو عرضها","Dibuja una imagen que añadiste desde tu computadora. x,y es su centro y el tamaño es su ancho"],"add a picture first":["קודם הוסיפו תמונה","أضف صورة أولًا","primero añade una imagen"],"Welcome! Drag blocks from the menu, connect the board and click Run. With a new board, click \"First-time setup\" first.":["ברוכים הבאים! גררו בלוקים מהתפריט, התחברו ללוח ולחצו על הרצה. עם לוח חדש, לחצו קודם על \"התקנה ראשונה\".","أهلًا بك! اسحب الكتل من القائمة، واتصل باللوحة واضغط تشغيل. مع لوحة جديدة، اضغط أولًا \"الإعداد الأول\".","¡Bienvenido! Arrastra bloques del menú, conecta la placa y haz clic en Ejecutar. Con una placa nueva, haz clic primero en \"Primera configuración\"."],"Welcome! Drag blocks from the menu, connect the micro:bit and click Run. With a new micro:bit, click \"First-time setup\" first.":["ברוכים הבאים! גררו בלוקים מהתפריט, התחברו למיקרוביט ולחצו על הרצה. עם מיקרוביט חדש, לחצו קודם על \"התקנה ראשונה\".","أهلًا بك! اسحب الكتل من القائمة، واتصل بالمايكروبت واضغط تشغيل. مع مايكروبت جديد، اضغط أولًا \"الإعداد الأول\".","¡Bienvenido! Arrastra bloques del menú, conecta la micro:bit y haz clic en Ejecutar. Con una micro:bit nueva, haz clic primero en \"Primera configuración\"."],"Loaded \"{0}\". Click Run.":["נטען \"{0}\". לחצו על הרצה.","تم تحميل \"{0}\". اضغط تشغيل.","Se cargó \"{0}\". Haz clic en Ejecutar."],"Connected":["מחובר","متصل","Conectado"],"Connected, no MicroPython":["מחובר, אין MicroPython","متصل، لا يوجد MicroPython","Conectado, sin MicroPython"],"Connecting…":["מתחבר…","جارٍ الاتصال…","Conectando…"],"Checking…":["בודק…","جارٍ الفحص…","Comprobando…"],"Running on board":["רץ על הלוח","يعمل على اللوحة","Ejecutando en la placa"],"Running on micro:bit":["רץ על המיקרוביט","يعمل على المايكروبت","Ejecutando en la micro:bit"],"Saving to board…":["שומר בלוח…","جارٍ الحفظ في اللوحة…","Guardando en la placa…"],"Saving to micro:bit…":["שומר במיקרוביט…","جارٍ الحفظ في المايكروبت…","Guardando en la micro:bit…"],"Installing screen library…":["מתקין את ספריית המסך…","جارٍ تثبيت مكتبة الشاشة…","Instalando la biblioteca de pantalla…"],"Sending picture…":["שולח תמונה…","جارٍ إرسال الصورة…","Enviando imagen…"],"Board connected. Click Run!":["הלוח מחובר. לחצו על הרצה!","اللوحة متصلة. اضغط تشغيل!","Placa conectada. ¡Haz clic en Ejecutar!"],"micro:bit connected. Click Run!":["המיקרוביט מחובר. לחצו על הרצה!","المايكروبت متصل. اضغط تشغيل!","micro:bit conectada. ¡Haz clic en Ejecutar!"],"The board was disconnected.":["הלוח התנתק.","انقطع الاتصال باللوحة.","La placa se desconectó."],"The micro:bit was disconnected.":["המיקרוביט התנתק.","انقطع الاتصال بالمايكروبت.","La micro:bit se desconectó."],"Your program is running on the board.":["התוכנית שלכם רצה על הלוח.","برنامجك يعمل على اللوحة.","Tu programa se está ejecutando en la placa."],"Your program is running on the micro:bit.":["התוכנית שלכם רצה על המיקרוביט.","برنامجك يعمل على المايكروبت.","Tu programa se está ejecutando en la micro:bit."],"The program finished.":["התוכנית הסתיימה.","انتهى البرنامج.","El programa terminó."],"The program stopped.":["התוכנית נעצרה.","توقف البرنامج.","El programa se detuvo."],"Stopped.":["נעצר.","توقف.","Detenido."],"Saved! Your program is running now and will run every time the board turns on.":["נשמר! התוכנית רצה עכשיו ותרוץ בכל פעם שהלוח נדלק.","تم الحفظ! برنامجك يعمل الآن وسيعمل كلما شغّلت اللوحة.","¡Guardado! Tu programa se está ejecutando y funcionará cada vez que se encienda la placa."],"Saved! Your program is running now and will run every time the micro:bit turns on.":["נשמר! התוכנית רצה עכשיו ותרוץ בכל פעם שהמיקרוביט נדלק.","تم الحفظ! برنامجك يعمل الآن وسيعمل كلما شغّلت المايكروبت.","¡Guardado! Tu programa se está ejecutando y funcionará cada vez que se encienda la micro:bit."],"Saving failed. Click Stop and try again.":["השמירה נכשלה. לחצו על עצירה ונסו שוב.","فشل الحفظ. اضغط إيقاف وحاول مرة أخرى.","No se pudo guardar. Haz clic en Detener e inténtalo de nuevo."],"Couldn't send the program. Click Stop and try again.":["לא הצלחנו לשלוח את התוכנית. לחצו על עצירה ונסו שוב.","تعذّر إرسال البرنامج. اضغط إيقاف وحاول مرة أخرى.","No se pudo enviar el programa. Haz clic en Detener e inténtalo de nuevo."],"Installing the screen library on the board. This takes a few seconds and only happens once.":["מתקין את ספריית המסך על הלוח. זה לוקח כמה שניות וקורה רק פעם אחת.","جارٍ تثبيت مكتبة الشاشة على اللوحة. يستغرق ذلك بضع ثوانٍ ويحدث مرة واحدة فقط.","Instalando la biblioteca de pantalla en la placa. Tarda unos segundos y solo pasa una vez."],"Screen library installed.":["ספריית המסך הותקנה.","تم تثبيت مكتبة الشاشة.","Biblioteca de pantalla instalada."],"Installing the colour screen library on the micro:bit. This takes a few seconds and only happens once.":["מתקין את ספריית המסך הצבעוני על המיקרוביט. זה לוקח כמה שניות וקורה רק פעם אחת.","جارٍ تثبيت مكتبة الشاشة الملونة على المايكروبت. يستغرق ذلك بضع ثوانٍ ويحدث مرة واحدة فقط.","Instalando la biblioteca de pantalla a color en la micro:bit. Tarda unos segundos y solo pasa una vez."],"Colour screen library installed.":["ספריית המסך הצבעוני הותקנה.","تم تثبيت مكتبة الشاشة الملونة.","Biblioteca de pantalla a color instalada."],"Made room on the micro:bit by removing {0} file{1} this program doesn't use.":["פינינו מקום במיקרוביט: נמחקו {0} קבצים שהתוכנית הזאת לא צריכה.","أفسحنا مكانًا في المايكروبت بحذف {0} من الملفات التي لا يستخدمها هذا البرنامج.","Se liberó espacio en la micro:bit quitando {0} archivo(s) que este programa no usa."],"Added the picture \"{0}\". Pick it in the \"screen: draw picture\" block.":["התמונה \"{0}\" נוספה. בחרו אותה בבלוק \"מסך: צייר תמונה\".","تمت إضافة الصورة \"{0}\". اخترها في الكتلة \"الشاشة: ارسم الصورة\".","Se añadió la imagen \"{0}\". Elígela en el bloque \"pantalla: dibujar imagen\"."],"Couldn't read that file. Choose a picture file like PNG or JPG.":["לא הצלחנו לקרוא את הקובץ. בחרו קובץ תמונה כמו PNG או JPG.","تعذّرت قراءة هذا الملف. اختر ملف صورة مثل PNG أو JPG.","No se pudo leer ese archivo. Elige una imagen, como PNG o JPG."],"Connecting to the board works in <b>Chrome</b> or <b>Edge</b> on a computer. In this browser you can build programs and see the code, but not run them on the board.":["חיבור ללוח עובד ב-<b>Chrome</b> או ב-<b>Edge</b> במחשב. בדפדפן הזה אפשר לבנות תוכניות ולראות את הקוד, אבל לא להריץ אותן על הלוח.","الاتصال باللوحة يعمل في <b>Chrome</b> أو <b>Edge</b> على الحاسوب. في هذا المتصفح يمكنك بناء البرامج ورؤية الكود، لكن لا يمكنك تشغيلها على اللوحة.","La conexión con la placa funciona en <b>Chrome</b> o <b>Edge</b> en una computadora. En este navegador puedes crear programas y ver el código, pero no ejecutarlos en la placa."],"Connecting to the micro:bit works in <b>Chrome</b> or <b>Edge</b> on a computer. In this browser you can build programs and see the code, but not run them on the micro:bit.":["חיבור למיקרוביט עובד ב-<b>Chrome</b> או ב-<b>Edge</b> במחשב. בדפדפן הזה אפשר לבנות תוכניות ולראות את הקוד, אבל לא להריץ אותן על המיקרוביט.","الاتصال بالمايكروبت يعمل في <b>Chrome</b> أو <b>Edge</b> على الحاسوب. في هذا المتصفح يمكنك بناء البرامج ورؤية الكود، لكن لا يمكنك تشغيلها على المايكروبت.","La conexión con la micro:bit funciona en <b>Chrome</b> o <b>Edge</b> en una computadora. En este navegador puedes crear programas y ver el código, pero no ejecutarlos en la micro:bit."],"This browser can't connect to the board. Open the app in Chrome or Edge on a computer.":["הדפדפן הזה לא יכול להתחבר ללוח. פתחו את האפליקציה ב-Chrome או ב-Edge במחשב.","لا يستطيع هذا المتصفح الاتصال باللوحة. افتح التطبيق في Chrome أو Edge على حاسوب.","Este navegador no puede conectarse a la placa. Abre la aplicación en Chrome o Edge en una computadora."],"This browser can't connect to the micro:bit. Open the app in Chrome or Edge on a computer.":["הדפדפן הזה לא יכול להתחבר למיקרוביט. פתחו את האפליקציה ב-Chrome או ב-Edge במחשב.","لا يستطيع هذا المتصفح الاتصال بالمايكروبت. افتح التطبيق في Chrome أو Edge على حاسوب.","Este navegador no puede conectarse a la micro:bit. Abre la aplicación en Chrome o Edge en una computadora."],"The browser blocks board connections in this view. Open the app file directly in Chrome or Edge.":["הדפדפן חוסם חיבור ללוח בתצוגה הזאת. פתחו את קובץ האפליקציה ישירות ב-Chrome או ב-Edge.","يمنع المتصفح الاتصال باللوحة في هذا العرض. افتح ملف التطبيق مباشرة في Chrome أو Edge.","El navegador bloquea la conexión con la placa en esta vista. Abre el archivo de la aplicación directamente en Chrome o Edge."],"The browser blocks board connections in this view. Open the app file directly in Chrome.":["הדפדפן חוסם חיבור ללוח בתצוגה הזאת. פתחו את קובץ האפליקציה ישירות ב-Chrome.","يمنع المتصفح الاتصال باللوحة في هذا العرض. افتح ملف التطبيق مباشرة في Chrome.","El navegador bloquea la conexión con la placa en esta vista. Abre el archivo de la aplicación directamente en Chrome."],"The browser blocks USB connections in this view. Open the app file directly in Chrome or Edge.":["הדפדפן חוסם חיבורי USB בתצוגה הזאת. פתחו את קובץ האפליקציה ישירות ב-Chrome או ב-Edge.","يمنع المتصفح اتصالات USB في هذا العرض. افتح ملف التطبيق مباشرة في Chrome أو Edge.","El navegador bloquea las conexiones USB en esta vista. Abre el archivo de la aplicación directamente en Chrome o Edge."],"Couldn't open the board. Another window may be using it. Close that window and try again.":["לא הצלחנו לפתוח את הלוח. אולי חלון אחר משתמש בו. סגרו את החלון ההוא ונסו שוב.","تعذّر فتح اللوحة. ربما تستخدمها نافذة أخرى. أغلق تلك النافذة وحاول مرة أخرى.","No se pudo abrir la placa. Puede que otra ventana la esté usando. Ciérrala e inténtalo de nuevo."],"Couldn't open the micro:bit. Another tab may be using it, like python.microbit.org or MakeCode. Close that tab and try again.":["לא הצלחנו לפתוח את המיקרוביט. אולי לשונית אחרת משתמשת בו, כמו python.microbit.org או MakeCode. סגרו את הלשונית ההיא ונסו שוב.","تعذّر فتح المايكروبت. ربما تستخدمه صفحة أخرى مثل python.microbit.org أو MakeCode. أغلق تلك الصفحة وحاول مرة أخرى.","No se pudo abrir la micro:bit. Puede que otra pestaña la esté usando, como python.microbit.org o MakeCode. Ciérrala e inténtalo de nuevo."],"The board is connected but not answering. It probably doesn't have MicroPython yet: click \"First-time setup\".":["הלוח מחובר אבל לא עונה. כנראה שעדיין אין עליו MicroPython: לחצו על \"התקנה ראשונה\".","اللوحة متصلة لكنها لا تستجيب. على الأرجح لا يوجد عليها MicroPython بعد: اضغط \"الإعداد الأول\".","La placa está conectada pero no responde. Seguramente aún no tiene MicroPython: haz clic en \"Primera configuración\"."],"The micro:bit is connected but not answering in MicroPython. It probably still has a MakeCode program: click \"First-time setup\".":["המיקרוביט מחובר אבל לא עונה ב-MicroPython. כנראה שעדיין יש עליו תוכנית MakeCode: לחצו על \"התקנה ראשונה\".","المايكروبت متصل لكنه لا يستجيب بـ MicroPython. على الأرجح ما زال عليه برنامج MakeCode: اضغط \"الإعداد الأول\".","La micro:bit está conectada pero no responde en MicroPython. Seguramente aún tiene un programa de MakeCode: haz clic en \"Primera configuración\"."],"The board isn't answering. Press the reset button on the board and click Run again. If it keeps happening, MicroPython is probably not on it yet: click \"First-time setup\".":["הלוח לא עונה. לחצו על כפתור האיפוס שעל הלוח ולחצו שוב על הרצה. אם זה ממשיך לקרות, כנראה שעדיין אין עליו MicroPython: לחצו על \"התקנה ראשונה\".","اللوحة لا تستجيب. اضغط زر إعادة التشغيل على اللوحة ثم اضغط تشغيل مرة أخرى. إذا استمر ذلك، فعلى الأرجح لا يوجد عليها MicroPython بعد: اضغط \"الإعداد الأول\".","La placa no responde. Pulsa el botón de reinicio de la placa y vuelve a hacer clic en Ejecutar. Si sigue pasando, seguramente aún no tiene MicroPython: haz clic en \"Primera configuración\"."],"The micro:bit isn't answering. Press the reset button on the micro:bit and click Run again. If it keeps happening, MicroPython is probably not on it yet: click \"First-time setup\".":["המיקרוביט לא עונה. לחצו על כפתור האיפוס שעל המיקרוביט ולחצו שוב על הרצה. אם זה ממשיך לקרות, כנראה שעדיין אין עליו MicroPython: לחצו על \"התקנה ראשונה\".","المايكروبت لا يستجيب. اضغط زر إعادة التشغيل على المايكروبت ثم اضغط تشغيل مرة أخرى. إذا استمر ذلك، فعلى الأرجح لا يوجد عليه MicroPython بعد: اضغط \"الإعداد الأول\".","La micro:bit no responde. Pulsa el botón de reinicio de la micro:bit y vuelve a hacer clic en Ejecutar. Si sigue pasando, seguramente aún no tiene MicroPython: haz clic en \"Primera configuración\"."],"The screen library is missing from the board. Reload the page and connect again to install it.":["ספריית המסך חסרה בלוח. טענו מחדש את הדף והתחברו שוב כדי להתקין אותה.","مكتبة الشاشة غير موجودة على اللوحة. أعد تحميل الصفحة واتصل من جديد لتثبيتها.","Falta la biblioteca de pantalla en la placa. Recarga la página y vuelve a conectar para instalarla."],"No SD card found. Put a FAT32 card in the slot and click Run again.":["לא נמצא כרטיס SD. הכניסו כרטיס FAT32 לחריץ ולחצו שוב על הרצה.","لم يتم العثور على بطاقة SD. ضع بطاقة FAT32 في المنفذ واضغط تشغيل مرة أخرى.","No se encontró tarjeta SD. Pon una tarjeta FAT32 en la ranura y vuelve a hacer clic en Ejecutar."],"That file isn't on the SD card yet. Add a line to it first.":["הקובץ הזה עדיין לא נמצא בכרטיס ה-SD. הוסיפו אליו שורה קודם.","هذا الملف غير موجود على بطاقة SD بعد. أضف إليه سطرًا أولًا.","Ese archivo aún no está en la tarjeta SD. Primero añádele una línea."],"The board couldn't talk to the screen or sensor. Press RESET on the board and connect again.":["הלוח לא הצליח לדבר עם המסך או החיישן. לחצו על RESET שעל הלוח והתחברו שוב.","لم تتمكن اللوحة من التواصل مع الشاشة أو المستشعر. اضغط RESET على اللوحة واتصل من جديد.","La placa no pudo comunicarse con la pantalla o el sensor. Pulsa RESET en la placa y vuelve a conectar."],"You used a variable before giving it a value.":["השתמשתם במשתנה לפני שנתתם לו ערך.","استخدمت متغيرًا قبل أن تعطيه قيمة.","Usaste una variable antes de darle un valor."],"You tried to divide by zero.":["ניסיתם לחלק באפס.","حاولت القسمة على صفر.","Intentaste dividir entre cero."],"A block got the wrong kind of value, like text where a number should go.":["בלוק קיבל ערך מסוג לא נכון, למשל טקסט במקום מספר.","حصلت كتلة على نوع خاطئ من القيم، مثل نص مكان رقم.","Un bloque recibió un tipo de valor equivocado, como texto donde va un número."],"A block isn't connected properly. Check that all your blocks snap together.":["בלוק לא מחובר כמו שצריך. בדקו שכל הבלוקים מחוברים זה לזה.","هناك كتلة غير موصولة بشكل صحيح. تأكد من أن كل الكتل متصلة ببعضها.","Un bloque no está bien conectado. Comprueba que todos tus bloques encajen."],"The board ran out of memory. Try smaller text or fewer blocks.":["לזיכרון של הלוח נגמר המקום. נסו טקסט קטן יותר או פחות בלוקים.","نفدت ذاكرة اللوحة. جرّب نصًا أصغر أو كتلًا أقل.","La placa se quedó sin memoria. Prueba con un texto más pequeño o menos bloques."],"The micro:bit ran out of memory. Try fewer blocks or shorter text.":["לזיכרון של המיקרוביט נגמר המקום. נסו פחות בלוקים או טקסט קצר יותר.","نفدت ذاكرة المايكروبت. جرّب كتلًا أقل أو نصًا أقصر.","La micro:bit se quedó sin memoria. Prueba con menos bloques o un texto más corto."],"Something went wrong in the program.":["משהו השתבש בתוכנית.","حدث خطأ ما في البرنامج.","Algo salió mal en el programa."],"A block got a number it can't use. Check the numbers in your blocks.":["בלוק קיבל מספר שהוא לא יכול להשתמש בו. בדקו את המספרים בבלוקים.","حصلت كتلة على رقم لا يمكنها استخدامه. تحقق من الأرقام في كتلك.","Un bloque recibió un número que no puede usar. Revisa los números de tus bloques."],"An LED block got a number that is too big or too small. x and y go from 0 to 4, brightness from 0 to 9.":["בלוק לדים קיבל מספר גדול מדי או קטן מדי. x ו-y הם מ-0 עד 4, והבהירות מ-0 עד 9.","حصلت كتلة أضواء على رقم كبير جدًا أو صغير جدًا. x وy من 0 إلى 4، والسطوع من 0 إلى 9.","Un bloque de LED recibió un número demasiado grande o pequeño. x e y van de 0 a 4 y el brillo de 0 a 9."],"This block needs a micro:bit V2 (the one with a gold logo and a speaker).":["הבלוק הזה צריך מיקרוביט V2 (זה עם הלוגו המוזהב והרמקול).","تحتاج هذه الكتلة إلى مايكروبت V2 (الذي فيه شعار ذهبي وسماعة).","Este bloque necesita una micro:bit V2 (la que tiene logo dorado y altavoz)."],"The colour screen library is missing. Unplug and reconnect the micro:bit, then click Run again.":["ספריית המסך הצבעוני חסרה. נתקו וחברו מחדש את המיקרוביט, ואז לחצו שוב על הרצה.","مكتبة الشاشة الملونة غير موجودة. افصل المايكروبت وأعد توصيله، ثم اضغط تشغيل مرة أخرى.","Falta la biblioteca de pantalla a color. Desconecta y vuelve a conectar la micro:bit, y haz clic otra vez en Ejecutar."],"That picture isn't on the micro:bit yet. Click Run again to send it.":["התמונה הזאת עדיין לא במיקרוביט. לחצו שוב על הרצה כדי לשלוח אותה.","هذه الصورة ليست على المايكروبت بعد. اضغط تشغيل مرة أخرى لإرسالها.","Esa imagen aún no está en la micro:bit. Vuelve a hacer clic en Ejecutar para enviarla."],"The micro:bit's storage is full. Use fewer or smaller pictures in this program, then click Run again.":["האחסון של המיקרוביט מלא. השתמשו בתוכנית בפחות תמונות או בתמונות קטנות יותר, ואז לחצו שוב על הרצה.","مساحة تخزين المايكروبت ممتلئة. استخدم صورًا أقل أو أصغر في هذا البرنامج، ثم اضغط تشغيل مرة أخرى.","El almacenamiento de la micro:bit está lleno. Usa menos imágenes o más pequeñas en este programa y vuelve a hacer clic en Ejecutar."],"The micro:bit's storage is full. Use fewer or smaller pictures, then click Run again.":["האחסון של המיקרוביט מלא. השתמשו בפחות תמונות או בתמונות קטנות יותר, ואז לחצו שוב על הרצה.","مساحة تخزين المايكروبت ممتلئة. استخدم صورًا أقل أو أصغر، ثم اضغط تشغيل مرة أخرى.","El almacenamiento de la micro:bit está lleno. Usa menos imágenes o más pequeñas y vuelve a hacer clic en Ejecutar."],"Saved the project in your Downloads folder. Use \"Open\" to load it again.":["הפרויקט נשמר בתיקיית ההורדות. השתמשו ב\"פתיחה\" כדי לטעון אותו שוב.","تم حفظ المشروع في مجلد التنزيلات. استخدم \"فتح\" لتحميله مرة أخرى.","El proyecto se guardó en tu carpeta de Descargas. Usa \"Abrir\" para cargarlo otra vez."],"Saved the Python code as main.py in your Downloads folder.":["קוד הפייתון נשמר בשם main.py בתיקיית ההורדות.","تم حفظ كود بايثون باسم main.py في مجلد التنزيلات.","El código Python se guardó como main.py en tu carpeta de Descargas."],"Code copied. Paste it with Ctrl+V.":["הקוד הועתק. הדביקו אותו עם Ctrl+V.","تم نسخ الكود. الصقه بـ Ctrl+V.","Código copiado. Pégalo con Ctrl+V."],"The code is selected. Press Ctrl+C to copy it.":["הקוד מסומן. לחצו Ctrl+C כדי להעתיק אותו.","الكود محدد. اضغط Ctrl+C لنسخه.","El código está seleccionado. Pulsa Ctrl+C para copiarlo."],"Project opened.":["הפרויקט נפתח.","تم فتح المشروع.","Proyecto abierto."],"Couldn't open that file. Choose a project file saved from this app.":["לא הצלחנו לפתוח את הקובץ. בחרו קובץ פרויקט שנשמר מהאפליקציה הזאת.","تعذّر فتح هذا الملف. اختر ملف مشروع محفوظًا من هذا التطبيق.","No se pudo abrir ese archivo. Elige un archivo de proyecto guardado desde esta aplicación."],"Choose a .bin file first.":["קודם בחרו קובץ ‎.bin.","اختر ملف ‎.bin أولًا.","Primero elige un archivo .bin."],"You need Chrome or Edge on a computer.":["צריך Chrome או Edge במחשב.","تحتاج إلى Chrome أو Edge على حاسوب.","Necesitas Chrome o Edge en una computadora."],"Loading the install tool…":["טוען את כלי ההתקנה…","جارٍ تحميل أداة التثبيت…","Cargando la herramienta de instalación…"],"Couldn't load the install tool. Check your internet connection.":["לא הצלחנו לטעון את כלי ההתקנה. בדקו את החיבור לאינטרנט.","تعذّر تحميل أداة التثبيت. تحقق من اتصالك بالإنترنت.","No se pudo cargar la herramienta de instalación. Comprueba tu conexión a internet."],"Found: {0}":["נמצא: {0}","تم العثور على: {0}","Encontrado: {0}"],"Done! Close this window and click \"Connect board\".":["סיימנו! סגרו את החלון ולחצו על \"חיבור ללוח\".","تم! أغلق هذه النافذة واضغط \"اتصال باللوحة\".","¡Listo! Cierra esta ventana y haz clic en \"Conectar placa\"."],"No board was chosen.":["לא נבחר לוח.","لم يتم اختيار لوحة.","No se eligió ninguna placa."],"Install failed: {0}":["ההתקנה נכשלה: {0}","فشل التثبيت: {0}","La instalación falló: {0}"],"Try this: unplug the board, hold BOOT, plug it back in, let go, then click \"Install\" again.":["נסו כך: נתקו את הלוח, החזיקו את BOOT, חברו אותו שוב, שחררו, ואז לחצו שוב על \"התקנה\".","جرّب هذا: افصل اللوحة، واضغط مطولًا على BOOT، وأعد توصيلها، ثم اترك الزر واضغط \"تثبيت\" مرة أخرى.","Prueba esto: desconecta la placa, mantén pulsado BOOT, vuelve a conectarla, suelta y haz clic otra vez en \"Instalar\"."]}</script>
+<script type="text/plain" id="lcdlibs">{"lcd": "# lcd v8 - Waveshare 1.8inch LCD for micro:bit (ST7735S, 160x128)\nfrom microbit import spi, pin1, pin2, pin8, pin12, pin13, pin14, pin15, pin16, sleep, Image\nimport math, random\nW = 160\nH = 128\nBLACK = 0x0000\nWHITE = 0xFFFF\nRED = 0xF800\nGREEN = 0x07E0\nBLUE = 0x001F\nYELLOW = 0xFFE0\nORANGE = 0xFD20\nPURPLE = 0x801F\nPINK = 0xF81F\nCYAN = 0x07FF\nGRAY = 0x8410\nBROWN = 0x9A60\nspi.init(baudrate=8000000, bits=8, mode=0, sclk=pin13, mosi=pin15, miso=pin14)\npin2.write_digital(1)\npin16.write_digital(0)\npin1.write_digital(1)\n_dc = pin12\ndef _cmd(c, d=None):\n _dc.write_digital(0)\n spi.write(bytes((c,)))\n if d:\n  _dc.write_digital(1)\n  spi.write(bytes(d))\npin8.write_digital(1)\nsleep(100)\npin8.write_digital(0)\nsleep(100)\npin8.write_digital(1)\nsleep(100)\nfor _c, _d in (\n (0xB1, (0x01, 0x2C, 0x2D)),\n (0xB2, (0x01, 0x2C, 0x2D)),\n (0xB3, (0x01, 0x2C, 0x2D, 0x01, 0x2C, 0x2D)),\n (0xB4, (0x07,)),\n (0xC0, (0xA2, 0x02, 0x84)),\n (0xC1, (0xC5,)),\n (0xC2, (0x0A, 0x00)),\n (0xC3, (0x8A, 0x2A)),\n (0xC4, (0x8A, 0xEE)),\n (0xC5, (0x0E,)),\n (0xE0, (0x0F, 0x1A, 0x0F, 0x18, 0x2F, 0x28, 0x20, 0x22, 0x1F, 0x1B, 0x23, 0x37, 0x00, 0x07, 0x02, 0x10)),\n (0xE1, (0x0F, 0x1B, 0x0F, 0x17, 0x33, 0x2C, 0x29, 0x2E, 0x30, 0x30, 0x39, 0x3F, 0x00, 0x07, 0x03, 0x10)),\n (0xF0, (0x01,)),\n (0xF6, (0x00,)),\n (0x3A, (0x05,)),\n (0x36, (0xA0,)),\n):\n _cmd(_c, _d)\n_cmd(0x11)\nsleep(120)\n_cmd(0x29)\ndef _win(x, y, w, h):\n x0 = x + 1\n y0 = y + 2\n x1 = x0 + w - 1\n y1 = y0 + h - 1\n _cmd(0x2A, (x0 >> 8, x0 & 255, x1 >> 8, x1 & 255))\n _cmd(0x2B, (y0 >> 8, y0 & 255, y1 >> 8, y1 & 255))\n _cmd(0x2C)\n _dc.write_digital(1)\ndef _px(c):\n c = int(c) & 0xFFFF\n return bytes((c >> 8, c & 255))\ndef rgb(r, g, b):\n r = max(0, min(255, int(r)))\n g = max(0, min(255, int(g)))\n b = max(0, min(255, int(b)))\n return ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3)\ndef random_color():\n return rgb(random.randint(40, 255), random.randint(40, 255), random.randint(40, 255))\ndef box(x, y, w, h, c):\n x = int(x)\n y = int(y)\n w = int(w)\n h = int(h)\n if x < 0:\n  w += x\n  x = 0\n if y < 0:\n  h += y\n  y = 0\n if x + w > W:\n  w = W - x\n if y + h > H:\n  h = H - y\n if w <= 0 or h <= 0:\n  return\n _win(x, y, w, h)\n p = _px(c)\n n = w * h\n if n >= 128:\n  chunk = p * 128\n  while n >= 128:\n   spi.write(chunk)\n   n -= 128\n if n:\n  spi.write(p * n)\nFILLS = [0]\ndef fill(c):\n box(0, 0, W, H, c)\n FILLS[0] += 1\ndef pixel(x, y, c):\n x = int(x)\n y = int(y)\n if 0 <= x < W and 0 <= y < H:\n  _win(x, y, 1, 1)\n  spi.write(_px(c))\ndef line(x0, y0, x1, y1, c):\n x0 = int(x0)\n y0 = int(y0)\n x1 = int(x1)\n y1 = int(y1)\n if x0 == x1:\n  box(x0, min(y0, y1), 1, abs(y1 - y0) + 1, c)\n  return\n if y0 == y1:\n  box(min(x0, x1), y0, abs(x1 - x0) + 1, 1, c)\n  return\n dx = abs(x1 - x0)\n dy = -abs(y1 - y0)\n sx = 1 if x0 < x1 else -1\n sy = 1 if y0 < y1 else -1\n err = dx + dy\n while True:\n  pixel(x0, y0, c)\n  if x0 == x1 and y0 == y1:\n   break\n  e2 = 2 * err\n  if e2 >= dy:\n   err += dy\n   x0 += sx\n  if e2 <= dx:\n   err += dx\n   y0 += sy\ndef rect(x, y, w, h, c, full=True):\n if full:\n  box(x, y, w, h, c)\n else:\n  box(x, y, w, 1, c)\n  box(x, y + h - 1, w, 1, c)\n  box(x, y, 1, h, c)\n  box(x + w - 1, y, 1, h, c)\ndef circle(cx, cy, r, c, full=True):\n cx = int(cx)\n cy = int(cy)\n r = int(r)\n if r <= 0:\n  pixel(cx, cy, c)\n  return\n if full:\n  for dy in range(-r, r + 1):\n   dx = int(math.sqrt(r * r - dy * dy))\n   box(cx - dx, cy + dy, 2 * dx + 1, 1, c)\n  return\n x = r\n y = 0\n err = 1 - r\n while x >= y:\n  for px, py in ((x, y), (y, x), (-y, x), (-x, y), (-x, -y), (-y, -x), (y, -x), (x, -y)):\n   pixel(cx + px, cy + py, c)\n  y += 1\n  if err < 0:\n   err += 2 * y + 1\n  else:\n   x -= 1\n   err += 2 * (y - x) + 1\ndef text(s, x, y, size=2, c=WHITE, bg=None):\n s = str(s)\n x = int(x)\n y = int(y)\n size = max(1, min(8, int(size)))\n room = (W - x) // (6 * size)\n if room <= 0 or y >= H:\n  return\n s = s[:room]\n if not s:\n  return\n glyphs = [Image(ch) for ch in s]\n if bg is None:\n  for gy in range(5):\n   row = []\n   for g in glyphs:\n    row += [g.get_pixel(gx, gy) > 0 for gx in range(5)] + [False]\n   i = 0\n   while i < len(row):\n    if row[i]:\n     k = i\n     while k < len(row) and row[k]:\n      k += 1\n     box(x + i * size, y + gy * size, (k - i) * size, size, c)\n     i = k\n    else:\n     i += 1\n  return\n pw = len(s) * 6 * size\n rows = min(6 * size, H - y)\n _win(x, y, pw, rows)\n fg = _px(c) * size\n bk = _px(bg) * size\n done = 0\n for gy in range(6):\n  parts = []\n  for g in glyphs:\n   for gx in range(6):\n    on = gx < 5 and gy < 5 and g.get_pixel(gx, gy) > 0\n    parts.append(fg if on else bk)\n  ln = b\"\".join(parts)\n  for _ in range(size):\n   if done < rows:\n    spi.write(ln)\n    done += 1\ndef brightness(p):\n p = max(0, min(100, int(p)))\n pin1.write_analog(p * 1023 // 100)\ndef icon(name, cx, cy, size=60, c=RED):\n img = getattr(Image, name)\n s = max(1, int(size) // 5)\n x0 = int(cx) - (5 * s) // 2\n y0 = int(cy) - (5 * s) // 2\n for yy in range(5):\n  for xx in range(5):\n   if img.get_pixel(xx, yy) > 0:\n    box(x0 + xx * s + 1, y0 + yy * s + 1, s - 1 if s > 2 else s, s - 1 if s > 2 else s, c)\ndef shape(*a):\n import lcd_shape\n lcd_shape.shape(*a)\ndef picture(*a):\n import lcd_pic\n lcd_pic.picture(*a)\ndef graph(*a):\n import lcd_graph\n lcd_graph.graph(*a)\ndef graph_add(*a):\n import lcd_graph\n lcd_graph.graph_add(*a)\ndef compass_start():\n import lcd_compass\n lcd_compass.compass_start()\ndef compass_dial(*a):\n import lcd_compass\n lcd_compass.compass_dial(*a)\nfill(BLACK)\n", "lcd_shape": "# lcd_shape v1 - shapes and animals for the Waveshare 1.8inch LCD\nimport math\nfrom lcd import box, circle, rgb, H, BLACK, WHITE, ORANGE\n_SPRITES = {\n \"dog\": (\n  \"................\",\n  \".DD..XXXXXX..DD.\",\n  \"DDDDXXXXXXXXDDDD\",\n  \"DDDXXXXXXXXXXDDD\",\n  \"DDDXXwkXXkwXXDDD\",\n  \"DDDXXXXXXXXXXDDD\",\n  \"DDDXXXXXXXXXXDDD\",\n  \".DDXXXwwwwXXXDD.\",\n  \".DDXXwwkkwwXXDD.\",\n  \"..DXXwwwwwwXXD..\",\n  \"...XXwwkkwwXX...\",\n  \"...XXXwrrwXXX...\",\n  \"....XXXrrXXX....\",\n  \".....XXXXXX.....\",\n  \"................\",\n  \"................\",\n ),\n \"cat\": (\n  \".X............X.\",\n  \".XX..........XX.\",\n  \".XrX........XrX.\",\n  \".XrrXXXXXXXXrrX.\",\n  \".XXXXXXXXXXXXXX.\",\n  \"XXXXXXXXXXXXXXXX\",\n  \"XXXwwXXXXXXwwXXX\",\n  \"XXXwkXXXXXXkwXXX\",\n  \"XXXXXXXXXXXXXXXX\",\n  \"kkkXXXXrrXXXXkkk\",\n  \"XXXXXXXXXXXXXXXX\",\n  \"kkkXXXkXXkXXXkkk\",\n  \".XXXXXXkkXXXXXX.\",\n  \"..XXXXXXXXXXXX..\",\n  \"...XXXXXXXXXX...\",\n  \"................\",\n ),\n \"rabbit\": (\n  \"...XX......XX...\",\n  \"..XrrX....XrrX..\",\n  \"..XrrX....XrrX..\",\n  \"..XrrX....XrrX..\",\n  \"..XrrX....XrrX..\",\n  \"..XXXXXXXXXXXX..\",\n  \".XXXXXXXXXXXXXX.\",\n  \".XXXkXXXXXXkXXX.\",\n  \".XXXXXXXXXXXXXX.\",\n  \".XXXXXXrrXXXXXX.\",\n  \".XXXXXkXXkXXXXX.\",\n  \"..XXXXXwwXXXXX..\",\n  \"...XXXXXXXXXX...\",\n  \"....XXXXXXXX....\",\n  \"................\",\n  \"................\",\n ),\n \"bear\": (\n  \"................\",\n  \".DDD........DDD.\",\n  \"DDrDXXXXXXXXDrDD\",\n  \".DDXXXXXXXXXXDD.\",\n  \"..XXXXXXXXXXXX..\",\n  \".XXXXXXXXXXXXXX.\",\n  \".XXXkXXXXXXkXXX.\",\n  \".XXXXXXXXXXXXXX.\",\n  \".XXXXXwwwwXXXXX.\",\n  \".XXXXwwkkwwXXXX.\",\n  \".XXXXwwwwwwXXXX.\",\n  \"..XXXXwkkwXXXX..\",\n  \"...XXXXXXXXXX...\",\n  \"....XXXXXXXX....\",\n  \"................\",\n  \"................\",\n ),\n \"frog\": (\n  \"................\",\n  \"..www......www..\",\n  \".wwkkw....wkkww.\",\n  \".wwkkwXXXXwkkww.\",\n  \".XwwwXXXXXXwwwX.\",\n  \"XXXXXXXXXXXXXXXX\",\n  \"XXXXXXkXXkXXXXXX\",\n  \"XXXXXXXXXXXXXXXX\",\n  \"XkkXXXXXXXXXXkkX\",\n  \"XXkkkkkkkkkkkkXX\",\n  \".XXXXXXXXXXXXXX.\",\n  \"..XXXXXXXXXXXX..\",\n  \"..DD........DD..\",\n  \".DDDD......DDDD.\",\n  \"................\",\n  \"................\",\n ),\n \"crocodile\": (\n  \"................\",\n  \"................\",\n  \"................\",\n  \"................\",\n  \"................\",\n  \"........XwkX....\",\n  \"...D.D.XXXXXX...\",\n  \"..XXXXXXXXXXXXXX\",\n  \"XXXXXXXXXXwXwXwX\",\n  \"..XXXXXXXkkkkkkk\",\n  \"..XXXXXXXwXwXwX.\",\n  \"...XXXXXXXXXXX..\",\n  \"...XX...XX......\",\n  \"...DD...DD......\",\n  \"................\",\n  \"................\",\n ),\n \"fish\": (\n  \"................\",\n  \"................\",\n  \"................\",\n  \"........D.......\",\n  \".......DDD......\",\n  \".....XXXXXXX....\",\n  \"X...XXXXXXXXX...\",\n  \"XX.XXXXXXXXwkX..\",\n  \"XXXXXXXXXXXXXXX.\",\n  \"XX.XXXXXXXXXXrr.\",\n  \"X...XXXXXXXXX...\",\n  \".....XXXXXXX....\",\n  \".......DD.......\",\n  \"................\",\n  \"................\",\n  \"................\",\n ),\n \"bird\": (\n  \"................\",\n  \"................\",\n  \"................\",\n  \"..........XX....\",\n  \".........XXXX...\",\n  \".........XXwkoo.\",\n  \"...DD....XXXXo..\",\n  \"..DDDDXXXXXXX...\",\n  \".XXXXXXXXXXXX...\",\n  \"XXXXXXXXXXXX....\",\n  \"...XXXXXXXX.....\",\n  \".....o...o......\",\n  \"....oo..oo......\",\n  \"................\",\n  \"................\",\n  \"................\",\n ),\n \"turtle\": (\n  \"................\",\n  \"......DDDD......\",\n  \"......DkkD......\",\n  \".......DD.......\",\n  \"..DD.XXXXXX.DD..\",\n  \"..DDXXDXXDXXDD..\",\n  \"....XDXXXXDX....\",\n  \"...XXXXDDXXXX...\",\n  \"...XXXDXXDXXX...\",\n  \"...XXXXDDXXXX...\",\n  \"....XDXXXXDX....\",\n  \"..DDXXDXXDXXDD..\",\n  \"..DD.XXXXXX.DD..\",\n  \".......DD.......\",\n  \"........D.......\",\n  \"................\",\n ),\n}\ndef _dark(c):\n c = int(c) & 0xFFFF\n r = ((c >> 11) & 31) * 6 // 10\n g = ((c >> 5) & 63) * 6 // 10\n b = (c & 31) * 6 // 10\n return (r << 11) | (g << 5) | b\ndef _poly(pts, c):\n ys = [p[1] for p in pts]\n y0 = max(0, int(min(ys)))\n y1 = min(H - 1, int(max(ys)))\n n = len(pts)\n for y in range(y0, y1 + 1):\n  yc = y + 0.5\n  xs = []\n  for i in range(n):\n   ax, ay = pts[i]\n   bx, by = pts[(i + 1) % n]\n   if (ay <= yc < by) or (by <= yc < ay):\n    xs.append(ax + (yc - ay) * (bx - ax) / (by - ay))\n  xs.sort()\n  for j in range(0, len(xs) - 1, 2):\n   xa = int(xs[j] + 0.5)\n   xb = int(xs[j + 1] + 0.5)\n   if xb > xa:\n    box(xa, y, xb - xa, 1, c)\ndef _ring(cx, cy, r, sides, start, inner=0):\n pts = []\n k = sides * 2 if inner else sides\n for i in range(k):\n  a = math.radians(start + 360 * i / k)\n  rr = r * inner if (inner and i % 2) else r\n  pts.append((cx + rr * math.cos(a), cy + rr * math.sin(a)))\n return pts\ndef _heart(cx, cy, r):\n pts = []\n for i in range(32):\n  t = 2 * math.pi * i / 32\n  x = 16 * math.sin(t) ** 3\n  y = 13 * math.cos(t) - 5 * math.cos(2 * t) - 2 * math.cos(3 * t) - math.cos(4 * t)\n  pts.append((cx + x * r / 17, cy - (y + 2) * r / 17))\n return pts\n_POLY = {\n \"triangle\": (3, -90, 0),\n \"square\": (4, -45, 0),\n \"diamond\": (4, -90, 0),\n \"pentagon\": (5, -90, 0),\n \"hexagon\": (6, -90, 0),\n \"octagon\": (8, -67.5, 0),\n \"star\": (5, -90, 0.42),\n}\ndef shape(name, cx, cy, size=48, c=WHITE):\n cx = int(cx)\n cy = int(cy)\n size = max(4, int(size))\n if name in _SPRITES:\n  s = max(1, size // 16)\n  x0 = cx - 8 * s\n  y0 = cy - 8 * s\n  pal = {\"X\": c, \"D\": _dark(c), \"k\": BLACK, \"w\": WHITE, \"r\": rgb(255, 110, 150), \"o\": ORANGE}\n  for j, row in enumerate(_SPRITES[name]):\n   i = 0\n   while i < 16:\n    ch = row[i]\n    k = i\n    while k < 16 and row[k] == ch:\n     k += 1\n    if ch != \".\":\n     box(x0 + i * s, y0 + j * s, (k - i) * s, s, pal[ch])\n    i = k\n  return\n r = size / 2\n if name == \"heart\":\n  _poly(_heart(cx, cy, r), c)\n elif name in _POLY:\n  n, start, inner = _POLY[name]\n  _poly(_ring(cx, cy, r, n, start, inner), c)\n else:\n  circle(cx, cy, r, c, True)\n", "lcd_pic": "# lcd_pic v1 - pictures for the Waveshare 1.8inch LCD\nfrom microbit import spi\nfrom lcd import _win, W, H\n_SEE = 0x0020\ndef _run(x, y, s, seg):\n n = len(seg) // 2\n if s > 1:\n  seg = b\"\".join([bytes(seg[2 * i:2 * i + 2]) * s for i in range(n)])\n w = len(seg) // 2\n a = max(0, -x)\n b = min(w, W - x)\n y0 = max(0, y)\n y1 = min(H, y + s)\n if a >= b or y0 >= y1:\n  return\n _win(x + a, y0, b - a, y1 - y0)\n part = seg[a * 2:b * 2]\n for _ in range(y1 - y0):\n  spi.write(part)\ndef picture(name, cx, cy, size=64):\n try:\n  f = open(\"p_\" + str(name) + \".bin\", \"rb\")\n except OSError:\n  raise OSError(\"NO_PICTURE\")\n try:\n  hd = f.read(2)\n  w = hd[0]\n  h = hd[1]\n  s = max(1, int(size) // w)\n  x0 = int(cx) - (w * s) // 2\n  y0 = int(cy) - (h * s) // 2\n  for j in range(h):\n   row = f.read(w * 2)\n   y = y0 + j * s\n   if y >= H:\n    break\n   i = 0\n   while i < w:\n    if (row[2 * i] << 8 | row[2 * i + 1]) == _SEE:\n     i += 1\n     continue\n    k = i\n    while k < w and (row[2 * k] << 8 | row[2 * k + 1]) != _SEE:\n     k += 1\n    _run(x0 + i * s, y, s, row[2 * i:2 * k])\n    i = k\n finally:\n  f.close()\n", "lcd_graph": "# lcd_graph v1 - live graph for the Waveshare 1.8inch LCD\nfrom lcd import box, text, rgb, W, H, BLACK, WHITE, YELLOW, FILLS\n_GX0 = 30\n_GX1 = W - 1\n_GY0 = 12\n_GY1 = H - 4\n_NC = (_GX1 - _GX0) // 2 + 1\n_G = {\"lo\": 0, \"hi\": 1, \"auto\": True, \"title\": \"\", \"ready\": False, \"s\": {}, \"sweep\": 0, \"fills\": -1}\ndef _fmt(v):\n if v == int(v) or abs(v) >= 100:\n  s = str(int(round(v)))\n else:\n  s = str(round(v, 1))\n return s[:4]\ndef _gframe():\n box(0, 0, W, H, BLACK)\n if _G[\"title\"]:\n  text(_G[\"title\"][:9], 0, 1, 1, WHITE)\n _gaxes()\n _G[\"ready\"] = True\n _G[\"fills\"] = FILLS[0]\ndef _gaxes():\n ax = rgb(190, 190, 200)\n mid = (_GY0 + _GY1) // 2\n box(_GX0 - 2, _GY0, 2, _GY1 - _GY0 + 2, ax)\n box(_GX0 - 2, _GY1 + 1, _GX1 - _GX0 + 3, 2, ax)\n for x in range(_GX0, _GX1 + 1, 6):\n  box(x, mid, 2, 1, rgb(70, 70, 80))\n box(_GX0 - 5, _GY0, 3, 1, ax)\n box(_GX0 - 5, mid, 3, 1, ax)\n box(_GX0 - 5, _GY1, 3, 1, ax)\n text(_fmt(_G[\"hi\"]), 0, _GY0, 1, ax, BLACK)\n text(_fmt((_G[\"hi\"] + _G[\"lo\"]) / 2), 0, mid - 2, 1, ax, BLACK)\n text(_fmt(_G[\"lo\"]), 0, _GY1 - 5, 1, ax, BLACK)\ndef graph(lo=None, hi=None, title=\"\"):\n _G[\"title\"] = str(title)\n _G[\"s\"] = {}\n _G[\"sweep\"] = 0\n if lo is None or hi is None or float(hi) <= float(lo):\n  _G[\"auto\"] = True\n  _G[\"ready\"] = False\n else:\n  _G[\"auto\"] = False\n  _G[\"lo\"] = float(lo)\n  _G[\"hi\"] = float(hi)\n  _gframe()\ndef _gy(v):\n t = (v - _G[\"lo\"]) / (_G[\"hi\"] - _G[\"lo\"])\n y = _GY1 - int(t * (_GY1 - _GY0) + 0.5)\n return max(_GY0, min(_GY1, y))\ndef _vline(x, a, b, c):\n box(x, min(a, b), 1, abs(a - b) + 1, c)\ndef _seg(vals, col, c):\n x = _GX0 + 2 * col\n y = _gy(vals[col])\n if col > 0 and vals[col - 1] is not None:\n  p = _gy(vals[col - 1])\n  m = (p + y) // 2\n  _vline(x - 1, p, m, c)\n  _vline(x, m, y, c)\n else:\n  box(x, y, 1, 1, c)\ndef _redraw():\n _gframe()\n for c in _G[\"s\"]:\n  vals = _G[\"s\"][c][1]\n  for col in range(_NC):\n   if vals[col] is not None:\n    _seg(vals, col, c)\ndef graph_add(v, c=YELLOW):\n v = float(v)\n if _G[\"fills\"] != FILLS[0]:\n  _G[\"ready\"] = False\n if _G[\"auto\"]:\n  if not _G[\"ready\"] and not _G[\"s\"]:\n   _G[\"lo\"] = v - 1\n   _G[\"hi\"] = v + 1\n   _gframe()\n  elif not _G[\"ready\"]:\n   _redraw()\n  elif v < _G[\"lo\"] or v > _G[\"hi\"]:\n   span = _G[\"hi\"] - _G[\"lo\"]\n   _G[\"lo\"] = min(_G[\"lo\"], v - span * 0.25)\n   _G[\"hi\"] = max(_G[\"hi\"], v + span * 0.25)\n   _redraw()\n elif not _G[\"ready\"]:\n  _redraw()\n s = _G[\"s\"].get(c)\n if s is None:\n  s = [0, [None] * _NC, len(_G[\"s\"]), _G[\"sweep\"]]\n  _G[\"s\"][c] = s\n if s[3] < _G[\"sweep\"]:\n  s[0] = 0\n  s[3] = _G[\"sweep\"]\n  return\n col = s[0]\n vals = s[1]\n vals[col] = v\n _seg(vals, col, c)\n col += 1\n if col >= _NC:\n  col = 0\n  s[3] += 1\n  if s[3] > _G[\"sweep\"]:\n   _G[\"sweep\"] = s[3]\n   box(_GX0, _GY0, _GX1 - _GX0 + 1, _GY1 - _GY0 + 1, BLACK)\n   _gaxes()\n   for k in _G[\"s\"]:\n    kv = _G[\"s\"][k][1]\n    for i in range(_NC):\n     kv[i] = None\n s[0] = col\n lx = W - 30 * (s[2] + 1)\n if lx > 54:\n  text((_fmt(v) + \"    \")[:4], lx, 1, 1, c, BLACK)\n", "lcd_compass": "# lcd_compass v1 - compass dial for the Waveshare 1.8inch LCD\nimport math\nfrom lcd import box, circle, text, W, H, BLACK, WHITE, RED, GRAY, FILLS\n_CX = 62\n_CY = 66\n_R = 56\n_C = {\"ready\": False, \"fills\": -1, \"h\": None}\n_DIRS = (\"N\", \"NE\", \"E\", \"SE\", \"S\", \"SW\", \"W\", \"NW\")\ndef _pt(a, r):\n t = math.radians(a)\n return (_CX + r * math.sin(t), _CY - r * math.cos(t))\ndef _tri(p, c):\n ys = [q[1] for q in p]\n for y in range(int(min(ys)), int(max(ys)) + 1):\n  yc = y + 0.5\n  xs = []\n  for i in range(3):\n   ax, ay = p[i]\n   bx, by = p[(i + 1) % 3]\n   if (ay <= yc < by) or (by <= yc < ay):\n    xs.append(ax + (yc - ay) * (bx - ax) / (by - ay))\n  if len(xs) >= 2:\n   xs.sort()\n   xa = int(xs[0] + 0.5)\n   xb = int(xs[-1] + 0.5)\n   if xb > xa:\n    box(xa, y, xb - xa, 1, c)\ndef _needle(a, cn, cs):\n tip = _pt(a, _R - 16)\n tail = _pt(a + 180, _R - 16)\n left = _pt(a - 90, 5)\n right = _pt(a + 90, 5)\n _tri((tip, left, right), cn)\n _tri((tail, left, right), cs)\ndef _card(a, show):\n for i in range(12):\n  if i % 3:\n   x, y = _pt(a + 30 * i, _R - 5)\n   box(int(x) - 1, int(y) - 1, 2, 2, GRAY if show else BLACK)\n for i in range(4):\n  ch = \"NESW\"[i]\n  x, y = _pt(a + 90 * i, _R - 9)\n  if show:\n   text(ch, int(x) - 2, int(y) - 2, 1, RED if ch == \"N\" else WHITE)\n  else:\n   box(int(x) - 3, int(y) - 3, 7, 7, BLACK)\ndef _frame(c):\n box(0, 0, W, H, BLACK)\n circle(_CX, _CY, _R, GRAY, False)\n circle(_CX, _CY, _R - 1, GRAY, False)\n _tri(((_CX - 5, 1), (_CX + 5, 1), (_CX, 8)), c)\n _C[\"ready\"] = True\n _C[\"fills\"] = FILLS[0]\n _C[\"h\"] = None\ndef compass_start():\n _C[\"ready\"] = False\ndef compass_dial(h, c=WHITE):\n if not _C[\"ready\"] or _C[\"fills\"] != FILLS[0]:\n  _frame(c)\n h = int(h) % 360\n prev = _C[\"h\"]\n if prev is not None:\n  if abs((h - prev + 180) % 360 - 180) < 2:\n   return\n  _needle(-prev, BLACK, BLACK)\n  _card(-prev, False)\n a = -h\n _card(a, True)\n _needle(a, RED, WHITE)\n circle(_CX, _CY, 3, c, True)\n text((str(h) + \"   \")[:3], 124, 44, 2, c, BLACK)\n text((_DIRS[int((h + 22.5) // 45) % 8] + \" \")[:2], 124, 74, 2, WHITE, BLACK)\n _C[\"h\"] = h\n"}</script>
+<script>
+document.documentElement.lang = 'en';
+/* ---------- languages ----------
+   The app is written in English. Every English string the children see goes through T(), which looks it up in
+   the translation table (id="i18n": {"English": ["עברית", "العربية", "Español"]}). Keys may contain {0}, {1}…
+   for parts that change (a name, a number). Page text is translated when it appears, so the rest of the code
+   can keep writing English. Changing language reloads the page; the project is kept in the browser. */
+const LANGS = {en:['English','ltr'], he:['עברית','rtl'], ar:['العربية','rtl'], es:['Español','ltr']};
+const LANG_COL = {he:0, ar:1, es:2};
+let LANG = '';
+try { LANG = new URLSearchParams(location.search).get('lang') || localStorage.getItem('workshop-lang') || ''; } catch(e) {}
+if (!(LANG in LANGS)) { const n = (navigator.language || 'en').slice(0, 2).toLowerCase(); LANG = n === 'iw' ? 'he' : (n in LANGS ? n : 'en'); }
+const RTL = LANGS[LANG][1] === 'rtl';
+document.documentElement.lang = LANG;
+document.documentElement.dir = RTL ? 'rtl' : 'ltr';
+const I18N_COLLECT = /[?&]i18n=collect/.test(location.search);
+const I18N_MISS = new Set();
+const norm = s => s.replace(/\s+/g, ' ').trim();
+const DICT = new Map(), PATS = [];
+(function(){
+  let table = {};
+  try { table = JSON.parse(document.getElementById('i18n').textContent); } catch(e) {}
+  if (LANG === 'en') return;
+  for (const [k, row] of Object.entries(table)) {
+    const tr = row[LANG_COL[LANG]]; if (!tr) continue;
+    const key = norm(k);
+    if (/\{\d\}/.test(key)) {
+      const order = [...key.matchAll(/\{(\d)\}/g)].map(m => +m[1]);
+      const re = new RegExp('^' + key.split(/\{\d\}/).map(p => p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('(.*?)') + '$');
+      PATS.push([re, order, tr]);
+    } else DICT.set(key, tr);
+  }
+})();
+function T(s){
+  if (typeof s !== 'string' || !s.trim()) return s;
+  const n = norm(s);
+  if (LANG !== 'en') {
+    if (DICT.has(n)) return DICT.get(n);
+    for (const [re, order, tr] of PATS) {
+      const m = re.exec(n);
+      if (m) return tr.replace(/\{(\d)\}/g, (_, i) => { const v = m[order.indexOf(+i) + 1]; return v === undefined ? '' : (DICT.get(norm(v)) || v); });
+    }
+  }
+  if (I18N_COLLECT && !/^[\d\s.,:%+\-−×°()]*$/.test(n)) I18N_MISS.add(n);
+  return s;
+}
+/* Page text */
+const I18N_SKIP = '#blocklyDiv,.blocklyDropDownDiv,.blocklyWidgetDiv,.blocklyTooltipDiv,svg,pre,code,script,style,.out,#langSel';
+const INLINE = new Set(['B','STRONG','I','EM','CODE','A','BR','KBD']);
+function i18nText(node){
+  const v = node.nodeValue; if (!v || !v.trim()) return;
+  const lines = v.split('\n');
+  const tr = lines.map(l => { const t = T(l); return t === l ? l : l.match(/^\s*/)[0] + t + l.match(/\s*$/)[0]; }).join('\n');
+  if (tr !== v) node.nodeValue = tr;
+}
+function i18nEl(el){
+  if (!el || el.nodeType !== 1 || el.closest(I18N_SKIP)) return;
+  for (const a of ['title', 'aria-label', 'placeholder', 'alt']) if (el.hasAttribute(a)) { const v = el.getAttribute(a), t = T(v); if (t !== v) el.setAttribute(a, t); }
+  const kids = [...el.childNodes];
+  const mixed = kids.some(n => n.nodeType === 3 && n.nodeValue.trim()) && kids.some(n => n.nodeType === 1) &&
+                kids.every(n => n.nodeType !== 1 || INLINE.has(n.tagName));
+  if (mixed) { const h = el.innerHTML, t = T(h); if (t !== h) el.innerHTML = t; return; }
+  for (const n of kids) { if (n.nodeType === 3) i18nText(n); else i18nEl(n); }
+}
+function i18nPage(){
+  document.title = T(document.title);
+  i18nEl(document.body);
+  if (LANG === 'en' && !I18N_COLLECT) return;
+  const mo = new MutationObserver(list => {
+    for (const m of list) {
+      if (m.type === 'characterData') { if (!m.target.parentElement?.closest(I18N_SKIP)) i18nText(m.target); continue; }
+      for (const n of m.addedNodes) {
+        if (n.nodeType === 1) i18nEl(n);
+        else if (n.nodeType === 3 && n.parentElement && !n.parentElement.closest(I18N_SKIP)) {
+          const p = n.parentElement, kids = [...p.childNodes];
+          if (kids.some(k => k.nodeType === 1)) i18nEl(p); else i18nText(n);
+        }
+      }
+    }
+    mo.takeRecords();
+  });
+  mo.observe(document.body, {childList:true, subtree:true, characterData:true});
+}
+/* Blocks and toolbox */
+function trBlockJson(j){
+  const o = Object.assign({}, j);
+  for (const k of Object.keys(o)) {
+    if (/^message\d+$/.test(k) || k === 'tooltip') o[k] = T(o[k]);
+    if (/^args\d+$/.test(k)) o[k] = o[k].map(a => {
+      if (!a || !Array.isArray(a.options)) return a.type === 'field_label' || a.type === 'field_label_serializable' ? Object.assign({}, a, {text:T(a.text)}) : a;
+      return Object.assign({}, a, {options: a.options.map(([label, val]) =>
+        [typeof label === 'string' ? T(label) : (label && label.alt ? Object.assign({}, label, {alt:T(label.alt)}) : label), val])});
+    });
+  }
+  return o;
+}
+const defineBlocksT = arr => Blockly.common.defineBlocksWithJsonArray(arr.map(trBlockJson));
+function trToolbox(t){
+  if (Array.isArray(t)) return t.map(trToolbox);
+  if (!t || typeof t !== 'object') return t;
+  const o = Object.assign({}, t);
+  if (o.kind === 'category' && o.name) o.name = T(o.name);
+  if ((o.kind === 'button' || o.kind === 'label') && o.text) o.text = T(o.text);
+  if (o.contents) o.contents = trToolbox(o.contents);
+  return o;
+}
+/* Language menu */
+(function(){
+  const sel = document.getElementById('langSel'); if (!sel) return;
+  for (const [code, [name]] of Object.entries(LANGS)) { const op = document.createElement('option'); op.value = code; op.textContent = name; op.lang = code; sel.appendChild(op); }
+  sel.value = LANG;
+  sel.onchange = () => {
+    let kept = false;
+    try { localStorage.setItem('workshop-lang', sel.value); kept = localStorage.getItem('workshop-lang') === sel.value; } catch(e) {}
+    const u = new URL(location.href);
+    if (kept) u.searchParams.delete('lang'); else u.searchParams.set('lang', sel.value);
+    if (u.href === location.href) location.reload(); else location.href = u.href;
+  };
+})();
+i18nPage();
+
+/* Blockly comes from a CDN; each file falls back to a second CDN if the first one fails. */
+const CDNS = ['https://cdn.jsdelivr.net/npm/', 'https://unpkg.com/'];
+const BLOCKLY_FILES = ['blockly_compressed.js', 'blocks_compressed.js', 'python_compressed.js', 'msg/' + LANG + '.js'];
+function loadScript(src){
+  return new Promise((res, rej) => {
+    const s = document.createElement('script'); s.src = src;
+    s.onload = res; s.onerror = () => { s.remove(); rej(new Error(src)); };
+    document.head.appendChild(s);
+  });
+}
+async function loadBlockly(){
+  for (const f of BLOCKLY_FILES) {
+    let ok = false;
+    for (const cdn of CDNS) { try { await loadScript(cdn + 'blockly@11.2.1/' + f); ok = true; break; } catch(e) {} }
+    if (!ok) return false;
+  }
+  return typeof window.Blockly !== 'undefined' && typeof window.python !== 'undefined';
+}
+function showLoadError(){
+  const d = document.getElementById('blocklyDiv');
+  d.innerHTML = '<div style="padding:24px;line-height:1.7;max-width:46ch"><h2 style="margin:0 0 8px;font-size:19px">' + T('The block editor didn\'t load') + '</h2>' +
+    '<p style="margin:0 0 8px">' + T('The app needs an internet connection to load the block editor.') + '</p>' +
+    '<p style="margin:0 0 12px;color:var(--muted)">' + T('Check that you\'re online. On a school computer, the network may be blocking <code>cdn.jsdelivr.net</code> and <code>unpkg.com</code>. Ask the IT team to allow them.') + '</p>' +
+    '<button class="btn main" onclick="location.reload()">' + T('Try again') + '</button></div>';
+}
+loadBlockly().then(ok => { if (ok) start(); else showLoadError(); });
+
+function start(){
+const $ = id => document.getElementById(id);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+/* ---------- LED icons ---------- */
+const IMAGES = {"HEART":[0,1,0,1,0,1,1,1,1,1,1,1,1,1,1,0,1,1,1,0,0,0,1,0,0],"HEART_SMALL":[0,0,0,0,0,0,1,0,1,0,0,1,1,1,0,0,0,1,0,0,0,0,0,0,0],"HAPPY":[0,0,0,0,0,0,1,0,1,0,0,0,0,0,0,1,0,0,0,1,0,1,1,1,0],"SMILE":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1,0,1,1,1,0],"SAD":[0,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0,1,1,1,0,1,0,0,0,1],"CONFUSED":[0,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0,1,0,1,0,1,0,1,0,1],"ANGRY":[1,0,0,0,1,0,1,0,1,0,0,0,0,0,0,1,1,1,1,1,1,0,1,0,1],"ASLEEP":[0,0,0,0,0,1,1,0,1,1,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0],"SURPRISED":[0,1,0,1,0,0,0,0,0,0,0,0,1,0,0,0,1,0,1,0,0,0,1,0,0],"SILLY":[1,0,0,0,1,0,0,0,0,0,1,1,1,1,1,0,0,1,0,1,0,0,1,1,1],"FABULOUS":[1,1,1,1,1,1,1,0,1,1,0,0,0,0,0,0,1,0,1,0,0,1,1,1,0],"MEH":[0,1,0,1,0,0,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0],"YES":[0,0,0,0,0,0,0,0,0,1,0,0,0,1,0,1,0,1,0,0,0,1,0,0,0],"NO":[1,0,0,0,1,0,1,0,1,0,0,0,1,0,0,0,1,0,1,0,1,0,0,0,1],"CLOCK12":[0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0],"CLOCK1":[0,0,0,1,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0],"CLOCK2":[0,0,0,0,0,0,0,0,1,1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0],"CLOCK3":[0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0],"CLOCK4":[0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,1,1,0,0,0,0,0],"CLOCK5":[0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,1,0],"CLOCK6":[0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0],"CLOCK7":[0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,1,0,0,0],"CLOCK8":[0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0,0,0,0],"CLOCK9":[0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0],"CLOCK10":[0,0,0,0,0,1,1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0],"CLOCK11":[0,1,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0],"ARROW_N":[0,0,1,0,0,0,1,1,1,0,1,0,1,0,1,0,0,1,0,0,0,0,1,0,0],"ARROW_NE":[0,0,1,1,1,0,0,0,1,1,0,0,1,0,1,0,1,0,0,0,1,0,0,0,0],"ARROW_E":[0,0,1,0,0,0,0,0,1,0,1,1,1,1,1,0,0,0,1,0,0,0,1,0,0],"ARROW_SE":[1,0,0,0,0,0,1,0,0,0,0,0,1,0,1,0,0,0,1,1,0,0,1,1,1],"ARROW_S":[0,0,1,0,0,0,0,1,0,0,1,0,1,0,1,0,1,1,1,0,0,0,1,0,0],"ARROW_SW":[0,0,0,0,1,0,0,0,1,0,1,0,1,0,0,1,1,0,0,0,1,1,1,0,0],"ARROW_W":[0,0,1,0,0,0,1,0,0,0,1,1,1,1,1,0,1,0,0,0,0,0,1,0,0],"ARROW_NW":[1,1,1,0,0,1,1,0,0,0,1,0,1,0,0,0,0,0,1,0,0,0,0,0,1],"TRIANGLE":[0,0,0,0,0,0,0,1,0,0,0,1,0,1,0,1,1,1,1,1,0,0,0,0,0],"TRIANGLE_LEFT":[1,0,0,0,0,1,1,0,0,0,1,0,1,0,0,1,0,0,1,0,1,1,1,1,1],"CHESSBOARD":[0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0],"DIAMOND":[0,0,1,0,0,0,1,0,1,0,1,0,0,0,1,0,1,0,1,0,0,0,1,0,0],"DIAMOND_SMALL":[0,0,0,0,0,0,0,1,0,0,0,1,0,1,0,0,0,1,0,0,0,0,0,0,0],"SQUARE":[1,1,1,1,1,1,0,0,0,1,1,0,0,0,1,1,0,0,0,1,1,1,1,1,1],"SQUARE_SMALL":[0,0,0,0,0,0,1,1,1,0,0,1,0,1,0,0,1,1,1,0,0,0,0,0,0],"RABBIT":[1,0,1,0,0,1,0,1,0,0,1,1,1,1,0,1,1,0,1,0,1,1,1,1,0],"COW":[1,0,0,0,1,1,0,0,0,1,1,1,1,1,1,0,1,1,1,0,0,0,1,0,0],"MUSIC_CROTCHET":[0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,1,1,1,0,0,1,1,1,0,0],"MUSIC_QUAVER":[0,0,1,0,0,0,0,1,1,0,0,0,1,0,1,1,1,1,0,0,1,1,1,0,0],"MUSIC_QUAVERS":[0,1,1,1,1,0,1,0,0,1,0,1,0,0,1,1,1,0,1,1,1,1,0,1,1],"PITCHFORK":[1,0,1,0,1,1,0,1,0,1,1,1,1,1,1,0,0,1,0,0,0,0,1,0,0],"XMAS":[0,0,1,0,0,0,1,1,1,0,0,0,1,0,0,0,1,1,1,0,1,1,1,1,1],"PACMAN":[0,1,1,1,1,1,1,0,1,0,1,1,1,0,0,1,1,1,1,0,0,1,1,1,1],"TARGET":[0,0,1,0,0,0,1,1,1,0,1,1,0,1,1,0,1,1,1,0,0,0,1,0,0],"TSHIRT":[1,1,0,1,1,1,1,1,1,1,0,1,1,1,0,0,1,1,1,0,0,1,1,1,0],"ROLLERSKATE":[0,0,0,1,1,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,1,0,1,0],"DUCK":[0,1,1,0,0,1,1,1,0,0,0,1,1,1,1,0,1,1,1,0,0,0,0,0,0],"HOUSE":[0,0,1,0,0,0,1,1,1,0,1,1,1,1,1,0,1,1,1,0,0,1,0,1,0],"TORTOISE":[0,0,0,0,0,0,1,1,1,0,1,1,1,1,1,0,1,0,1,0,0,0,0,0,0],"BUTTERFLY":[1,1,0,1,1,1,1,1,1,1,0,0,1,0,0,1,1,1,1,1,1,1,0,1,1],"STICKFIGURE":[0,0,1,0,0,1,1,1,1,1,0,0,1,0,0,0,1,0,1,0,1,0,0,0,1],"GHOST":[1,1,1,1,1,1,0,1,0,1,1,1,1,1,1,1,1,1,1,1,1,0,1,0,1],"SWORD":[0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,1,1,1,0,0,0,1,0,0],"GIRAFFE":[1,1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,1,1,0,0,1,0,1,0],"SKULL":[0,1,1,1,0,1,0,1,0,1,1,1,1,1,1,0,1,1,1,0,0,1,1,1,0],"UMBRELLA":[0,1,1,1,0,1,1,1,1,1,0,0,1,0,0,1,0,1,0,0,0,1,1,0,0],"SNAKE":[1,1,0,0,0,1,1,0,1,1,0,1,0,1,0,0,1,1,1,0,0,0,0,0,0],"SCISSORS":[1,1,0,0,1,1,1,0,1,0,0,0,1,0,0,1,1,0,1,0,1,1,0,0,1]};
+const ICONS = ['HEART','HEART_SMALL','HAPPY','SMILE','SAD','CONFUSED','ANGRY','ASLEEP','SURPRISED','SILLY','FABULOUS','MEH',
+  'YES','NO','ARROW_N','ARROW_E','ARROW_S','ARROW_W','TRIANGLE','DIAMOND','SQUARE','CHESSBOARD','TARGET',
+  'RABBIT','COW','DUCK','TORTOISE','BUTTERFLY','GIRAFFE','SNAKE','GHOST','SKULL','HOUSE','UMBRELLA',
+  'MUSIC_QUAVER','PACMAN','SWORD','TSHIRT','STICKFIGURE','XMAS'].filter(n => IMAGES[n]);
+const pretty = n => n.toLowerCase().replace(/_/g, ' ');
+function ledIcon(bits){
+  let dots = '';
+  bits.forEach((b, i) => { const x = i % 5, y = Math.floor(i / 5);
+    dots += `<rect x="${1 + x*6}" y="${1 + y*6}" width="4" height="4" rx="1" fill="${b ? '#FF3B3B' : '#3A2626'}"/>`; });
+  return 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 30" width="30" height="30"><rect width="30" height="30" rx="4" fill="#160C0C"/>${dots}</svg>`);
+}
+
+/* ---------- colour screen: colours, shapes and animals ---------- */
+const COLORS = [
+  ['BLACK','#000000','black'],['WHITE','#FFFFFF','white'],['RED','#FF2A2A','red'],['GREEN','#22C55E','green'],
+  ['BLUE','#2563EB','blue'],['YELLOW','#FFE11A','yellow'],['ORANGE','#FF9F1A','orange'],['PURPLE','#8B2BE2','purple'],
+  ['PINK','#FF3FB4','pink'],['CYAN','#22D3EE','cyan'],['GRAY','#8A8F98','gray'],['BROWN','#9A5B2E','brown']];
+const swatch = hex => 'data:image/svg+xml,' + encodeURIComponent(
+  `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="18"><rect x="1" y="1" width="24" height="16" rx="4" fill="${hex}" stroke="#00000055"/></svg>`);
+const SPRITES = {"dog":["................",".DD..XXXXXX..DD.","DDDDXXXXXXXXDDDD","DDDXXXXXXXXXXDDD","DDDXXwkXXkwXXDDD","DDDXXXXXXXXXXDDD","DDDXXXXXXXXXXDDD",".DDXXXwwwwXXXDD.",".DDXXwwkkwwXXDD.","..DXXwwwwwwXXD..","...XXwwkkwwXX...","...XXXwrrwXXX...","....XXXrrXXX....",".....XXXXXX.....","................","................"],"cat":[".X............X.",".XX..........XX.",".XrX........XrX.",".XrrXXXXXXXXrrX.",".XXXXXXXXXXXXXX.","XXXXXXXXXXXXXXXX","XXXwwXXXXXXwwXXX","XXXwkXXXXXXkwXXX","XXXXXXXXXXXXXXXX","kkkXXXXrrXXXXkkk","XXXXXXXXXXXXXXXX","kkkXXXkXXkXXXkkk",".XXXXXXkkXXXXXX.","..XXXXXXXXXXXX..","...XXXXXXXXXX...","................"],"rabbit":["...XX......XX...","..XrrX....XrrX..","..XrrX....XrrX..","..XrrX....XrrX..","..XrrX....XrrX..","..XXXXXXXXXXXX..",".XXXXXXXXXXXXXX.",".XXXkXXXXXXkXXX.",".XXXXXXXXXXXXXX.",".XXXXXXrrXXXXXX.",".XXXXXkXXkXXXXX.","..XXXXXwwXXXXX..","...XXXXXXXXXX...","....XXXXXXXX....","................","................"],"bear":["................",".DDD........DDD.","DDrDXXXXXXXXDrDD",".DDXXXXXXXXXXDD.","..XXXXXXXXXXXX..",".XXXXXXXXXXXXXX.",".XXXkXXXXXXkXXX.",".XXXXXXXXXXXXXX.",".XXXXXwwwwXXXXX.",".XXXXwwkkwwXXXX.",".XXXXwwwwwwXXXX.","..XXXXwkkwXXXX..","...XXXXXXXXXX...","....XXXXXXXX....","................","................"],"frog":["................","..www......www..",".wwkkw....wkkww.",".wwkkwXXXXwkkww.",".XwwwXXXXXXwwwX.","XXXXXXXXXXXXXXXX","XXXXXXkXXkXXXXXX","XXXXXXXXXXXXXXXX","XkkXXXXXXXXXXkkX","XXkkkkkkkkkkkkXX",".XXXXXXXXXXXXXX.","..XXXXXXXXXXXX..","..DD........DD..",".DDDD......DDDD.","................","................"],"crocodile":["................","................","................","................","................","........XwkX....","...D.D.XXXXXX...","..XXXXXXXXXXXXXX","XXXXXXXXXXwXwXwX","..XXXXXXXkkkkkkk","..XXXXXXXwXwXwX.","...XXXXXXXXXXX..","...XX...XX......","...DD...DD......","................","................"],"fish":["................","................","................","........D.......",".......DDD......",".....XXXXXXX....","X...XXXXXXXXX...","XX.XXXXXXXXwkX..","XXXXXXXXXXXXXXX.","XX.XXXXXXXXXXrr.","X...XXXXXXXXX...",".....XXXXXXX....",".......DD.......","................","................","................"],"bird":["................","................","................","..........XX....",".........XXXX...",".........XXwkoo.","...DD....XXXXo..","..DDDDXXXXXXX...",".XXXXXXXXXXXX...","XXXXXXXXXXXX....","...XXXXXXXX.....",".....o...o......","....oo..oo......","................","................","................"],"turtle":["................","......DDDD......","......DkkD......",".......DD.......","..DD.XXXXXX.DD..","..DDXXDXXDXXDD..","....XDXXXXDX....","...XXXXDDXXXX...","...XXXDXXDXXX...","...XXXXDDXXXX...","....XDXXXXDX....","..DDXXDXXDXXDD..","..DD.XXXXXX.DD..",".......DD.......","........D.......","................"]};
+const SHAPES = [['dog','dog'],['cat','cat'],['crocodile','crocodile'],['rabbit','rabbit'],['bear','bear'],['frog','frog'],
+  ['fish','fish'],['bird','bird'],['turtle','turtle'],['star','star'],['heart','heart'],['triangle','triangle'],['square','square'],
+  ['diamond','diamond'],['pentagon','pentagon'],['hexagon','hexagon'],['octagon','octagon']];
+const ICON_BODY = {dog:'#AA6E3C', cat:'#FFA01E', rabbit:'#EBEBEB', bear:'#965F32', frog:'#3CBE50', crocodile:'#32A046', fish:'#2878F0', bird:'#F03C3C', turtle:'#3CAA5A'};
+const POLY = {triangle:[3,-90,0], square:[4,-45,0], diamond:[4,-90,0], pentagon:[5,-90,0], hexagon:[6,-90,0], octagon:[8,-67.5,0], star:[5,-90,0.42]};
+const darken = hex => '#' + [1,3,5].map(i => Math.round(parseInt(hex.substr(i,2),16)*.6).toString(16).padStart(2,'0')).join('');
+function shapePoints(name, cx, cy, r){
+  if (name === 'heart') { const pts = [];
+    for (let i = 0; i < 32; i++) { const t = 2*Math.PI*i/32;
+      const x = 16*Math.sin(t)**3, y = 13*Math.cos(t) - 5*Math.cos(2*t) - 2*Math.cos(3*t) - Math.cos(4*t);
+      pts.push([cx + x*r/17, cy - (y+2)*r/17]); }
+    return pts; }
+  const [n, start, inner] = POLY[name], k = inner ? n*2 : n, pts = [];
+  for (let i = 0; i < k; i++) { const a = (start + 360*i/k) * Math.PI/180, rr = inner && i%2 ? r*inner : r;
+    pts.push([cx + rr*Math.cos(a), cy + rr*Math.sin(a)]); }
+  return pts;
+}
+function shapeIcon(name){
+  let body = '';
+  if (SPRITES[name]) {
+    const X = ICON_BODY[name], pal = {X, D:darken(X), k:'#000', w:'#fff', r:'#FF6E96', o:'#FFA01E'};
+    SPRITES[name].forEach((row, y) => { let i = 0;
+      while (i < 16) { const ch = row[i]; let k = i; while (k < 16 && row[k] === ch) k++;
+        if (ch !== '.') body += `<rect x="${i}" y="${y}" width="${k-i}" height="1" fill="${pal[ch]}"/>`; i = k; } });
+    return 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="32" height="32" shape-rendering="crispEdges">${body}</svg>`);
+  }
+  const pts = shapePoints(name, 16, 16, 14).map(p => p.map(v => v.toFixed(1)).join(',')).join(' ');
+  return 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32"><polygon points="${pts}" fill="#FFFFFF"/></svg>`);
+}
+
+/* ---------- blocks ---------- */
+const C_SCR = '#0F7B6C', C_COLOR = '#C2410C', C_LED = '#4338CA', C_INPUT = '#7C3AED', C_MUSIC = '#C2410C', C_RADIO = '#0E7490', C_PINS = '#475569', C_TIME = '#B45309';
+const num = n => ({shadow:{type:'math_number', fields:{NUM:n}}});
+const col = c => ({shadow:{type:'scr_color', fields:{C:c}}});
+const txt = t => ({shadow:{type:'text', fields:{TEXT:t}}});
+const AB = [['A','a'],['B','b'],['A+B','ab']];
+const PINS = [['P0','0'],['P1','1'],['P2','2']];
+const GESTURES = [['shake','shake'],['face up','face up'],['face down','face down'],['tilt left','left'],['tilt right','right'],['logo up','up'],['logo down','down'],['free fall','freefall']];
+const MELODIES = [['birthday','BIRTHDAY'],['power up','POWER_UP'],['power down','POWER_DOWN'],['jump up','JUMP_UP'],['jump down','JUMP_DOWN'],
+  ['ba ding','BA_DING'],['wawawawaa','WAWAWAWAA'],['ringtone','RINGTONE'],['entertainer','ENTERTAINER'],['ode','ODE'],
+  ['nyan','NYAN'],['funk','FUNK'],['blues','BLUES'],['wedding','WEDDING'],['punchline','PUNCHLINE'],['chase','CHASE'],['baddy','BADDY'],['dadadadum','DADADADUM']];
+const SOUNDS = [['happy','HAPPY'],['hello','HELLO'],['giggle','GIGGLE'],['twinkle','TWINKLE'],['soaring','SOARING'],['spring','SPRING'],['slide','SLIDE'],['mysterious','MYSTERIOUS'],['sad','SAD'],['yawn','YAWN']];
+
+const drawDef = {type:'mb_draw', colour:C_LED, previousStatement:null, nextStatement:null,
+  tooltip:'Tick the LEDs you want on, then the picture shows on the micro:bit'};
+drawDef.message0 = 'draw a picture';
+for (let r = 0; r < 5; r++) {
+  drawDef['message' + (r + 1)] = [1,2,3,4,5].map(i => '%' + i).join(' ');
+  drawDef['args' + (r + 1)] = [0,1,2,3,4].map(c => ({type:'field_checkbox', name:`L${r}${c}`, checked:false}));
+}
+
+defineBlocksT([
+  {type:'mb_icon', message0:'show icon %1', args0:[{type:'field_dropdown', name:'ICON',
+    options: ICONS.map(n => [{src:ledIcon(IMAGES[n]), width:30, height:30, alt:pretty(n)}, n])}],
+    previousStatement:null, nextStatement:null, colour:C_LED, tooltip:'Shows a built-in picture on the 5×5 LEDs'},
+  drawDef,
+  {type:'mb_scroll', message0:'scroll %1', args0:[{type:'input_value', name:'TEXT'}],
+    previousStatement:null, nextStatement:null, colour:C_LED, tooltip:'Slides text or a number across the LEDs'},
+  {type:'mb_plot', message0:'LED x %1 y %2 brightness %3', args0:[
+    {type:'input_value', name:'X', check:'Number'},{type:'input_value', name:'Y', check:'Number'},{type:'input_value', name:'B', check:'Number'}],
+    inputsInline:true, previousStatement:null, nextStatement:null, colour:C_LED, tooltip:'x and y go from 0 to 4. Brightness goes from 0 (off) to 9 (brightest)'},
+  {type:'mb_clear', message0:'clear LEDs', previousStatement:null, nextStatement:null, colour:C_LED, tooltip:'Turns every LED off'},
+
+  {type:'mb_button', message0:'button %1 is pressed?', args0:[{type:'field_dropdown', name:'BTN', options:AB}],
+    output:'Boolean', colour:C_INPUT, tooltip:'True while the button is held down'},
+  {type:'mb_button_was', message0:'button %1 was pressed?', args0:[{type:'field_dropdown', name:'BTN', options:[['A','a'],['B','b']]}],
+    output:'Boolean', colour:C_INPUT, tooltip:'True if the button was pressed since the last time you asked. Good for counting presses'},
+  {type:'mb_logo', message0:'logo touched?', output:'Boolean', colour:C_INPUT, tooltip:'True when you touch the gold logo (micro:bit V2)'},
+  {type:'mb_gesture', message0:'gesture is %1?', args0:[{type:'field_dropdown', name:'G', options:GESTURES}],
+    output:'Boolean', colour:C_INPUT, tooltip:'Checks how the micro:bit is being held or moved'},
+  {type:'mb_accel', message0:'acceleration %1 (mg)', args0:[{type:'field_dropdown', name:'AXIS', options:[['x','x'],['y','y'],['z','z']]}],
+    output:'Number', colour:C_INPUT, tooltip:'Tilt and movement. About -1024 to 1024 when you tilt the board'},
+  {type:'mb_light', message0:'light level (0 to 255)', output:'Number', colour:C_INPUT, tooltip:'How bright it is, measured by the LEDs'},
+  {type:'mb_temp', message0:'temperature °C', output:'Number', colour:C_INPUT, tooltip:'Temperature of the processor, close to the room temperature'},
+  {type:'mb_compass', message0:'compass heading (0 to 359)', output:'Number', colour:C_INPUT,
+    tooltip:'Which way the micro:bit points. 0 is north. The first time, it asks you to tilt the board to fill the screen'},
+  {type:'mb_sound_level', message0:'sound level (0 to 255)', output:'Number', colour:C_INPUT, tooltip:'How loud it is around the microphone (micro:bit V2)'},
+
+  {type:'mb_melody', message0:'play melody %1', args0:[{type:'field_dropdown', name:'M', options:MELODIES}],
+    previousStatement:null, nextStatement:null, colour:C_MUSIC, tooltip:'Plays a built-in tune and waits until it ends'},
+  {type:'mb_tone', message0:'play tone %1 Hz for %2 seconds', args0:[{type:'input_value', name:'F', check:'Number'},{type:'input_value', name:'S', check:'Number'}],
+    inputsInline:true, previousStatement:null, nextStatement:null, colour:C_MUSIC, tooltip:'440 Hz is the note A. Higher numbers make higher notes'},
+  {type:'mb_sound', message0:'play sound %1', args0:[{type:'field_dropdown', name:'S', options:SOUNDS}],
+    previousStatement:null, nextStatement:null, colour:C_MUSIC, tooltip:'Plays an expressive sound on the speaker (micro:bit V2)'},
+  {type:'mb_volume', message0:'set volume %1 (0 to 255)', args0:[{type:'input_value', name:'V', check:'Number'}],
+    inputsInline:true, previousStatement:null, nextStatement:null, colour:C_MUSIC, tooltip:'How loud the speaker plays (micro:bit V2)'},
+
+  {type:'mb_radio_group', message0:'radio group %1', args0:[{type:'input_value', name:'G', check:'Number'}],
+    inputsInline:true, previousStatement:null, nextStatement:null, colour:C_RADIO, tooltip:'Pick a group from 0 to 255. Only micro:bits in the same group hear each other'},
+  {type:'mb_radio_send', message0:'radio send %1', args0:[{type:'input_value', name:'TEXT'}],
+    previousStatement:null, nextStatement:null, colour:C_RADIO, tooltip:'Sends a message to other micro:bits nearby'},
+  {type:'mb_radio_receive', message0:'radio message received', output:'String', colour:C_RADIO,
+    tooltip:'The next message from another micro:bit, or empty text if nothing arrived'},
+
+  {type:'mb_pin_write', message0:'set pin %1 %2', args0:[{type:'field_dropdown', name:'PIN', options:PINS},{type:'field_dropdown', name:'ON', options:[['on','1'],['off','0']]}],
+    previousStatement:null, nextStatement:null, colour:C_PINS, tooltip:'Turns a gold pin on (3 V) or off. Good for an LED with a resistor'},
+  {type:'mb_pin_read', message0:'pin %1 is on?', args0:[{type:'field_dropdown', name:'PIN', options:PINS}],
+    output:'Boolean', colour:C_PINS, tooltip:'True when the pin gets 3 V'},
+  {type:'mb_pin_analog', message0:'analog pin %1 (0 to 1023)', args0:[{type:'field_dropdown', name:'PIN', options:PINS}],
+    output:'Number', colour:C_PINS, tooltip:'Reads a sensor like a light sensor or knob'},
+  {type:'mb_pin_touch', message0:'pin %1 touched?', args0:[{type:'field_dropdown', name:'PIN', options:PINS}],
+    output:'Boolean', colour:C_PINS, tooltip:'Hold GND with one hand and touch the pin with the other'},
+
+  {type:'scr_color', message0:'%1', args0:[{type:'field_dropdown', name:'C',
+    options: COLORS.map(([k,hex,name]) => [{src:swatch(hex), width:26, height:18, alt:name}, k])}],
+    output:'Colour', colour:C_COLOR, tooltip:'Pick a colour'},
+  {type:'scr_rgb', message0:'colour: red %1 green %2 blue %3', args0:[
+    {type:'input_value', name:'R', check:'Number'},{type:'input_value', name:'G', check:'Number'},{type:'input_value', name:'B', check:'Number'}],
+    inputsInline:true, output:'Colour', colour:C_COLOR, tooltip:'Mix your own colour. Each number goes from 0 to 255'},
+  {type:'scr_random', message0:'random colour', output:'Colour', colour:C_COLOR, tooltip:'A different colour every time'},
+  {type:'scr_fill', message0:'screen: fill with %1', args0:[{type:'input_value', name:'COLOR', check:'Colour'}],
+    previousStatement:null, nextStatement:null, colour:C_SCR, tooltip:'Paints the whole colour screen one colour'},
+  {type:'scr_text', message0:'screen: write %1 at x %2 y %3 size %4 colour %5', args0:[
+    {type:'input_value', name:'TEXT'},{type:'input_value', name:'X', check:'Number'},{type:'input_value', name:'Y', check:'Number'},
+    {type:'field_dropdown', name:'SIZE', options:[['1','1'],['2','2'],['3','3'],['4','4'],['5','5']]},
+    {type:'input_value', name:'COLOR', check:'Colour'}],
+    inputsInline:true, previousStatement:null, nextStatement:null, colour:C_SCR, tooltip:'Writes text or a number with the micro:bit letters'},
+  {type:'scr_shape', message0:'screen: draw %1 at x %2 y %3 size %4 colour %5', args0:[
+    {type:'field_dropdown', name:'SHAPE', options: SHAPES.map(([k, label]) => [{src:shapeIcon(k), width:32, height:32, alt:label}, k])},
+    {type:'input_value', name:'X', check:'Number'},{type:'input_value', name:'Y', check:'Number'},
+    {type:'input_value', name:'SIZE', check:'Number'},{type:'input_value', name:'COLOR', check:'Colour'}],
+    inputsInline:true, previousStatement:null, nextStatement:null, colour:C_SCR,
+    tooltip:'Draws a shape or an animal. x,y is its centre and size is how wide it is. Animals use the colour for their body'},
+  {type:'scr_icon', message0:'screen: draw icon %1 at x %2 y %3 size %4 colour %5', args0:[
+    {type:'field_dropdown', name:'ICON', options: ICONS.map(n => [{src:ledIcon(IMAGES[n]), width:30, height:30, alt:pretty(n)}, n])},
+    {type:'input_value', name:'X', check:'Number'},{type:'input_value', name:'Y', check:'Number'},
+    {type:'input_value', name:'SIZE', check:'Number'},{type:'input_value', name:'COLOR', check:'Colour'}],
+    inputsInline:true, previousStatement:null, nextStatement:null, colour:C_SCR, tooltip:'Draws a micro:bit picture big on the colour screen'},
+  {type:'scr_rect', message0:'screen: rectangle x %1 y %2 width %3 height %4 colour %5 filled %6', args0:[
+    {type:'input_value', name:'X', check:'Number'},{type:'input_value', name:'Y', check:'Number'},
+    {type:'input_value', name:'W', check:'Number'},{type:'input_value', name:'H', check:'Number'},
+    {type:'input_value', name:'COLOR', check:'Colour'},{type:'field_checkbox', name:'FULL', checked:true}],
+    inputsInline:true, previousStatement:null, nextStatement:null, colour:C_SCR, tooltip:'x,y is the top-left corner'},
+  {type:'scr_circle', message0:'screen: circle at x %1 y %2 radius %3 colour %4 filled %5', args0:[
+    {type:'input_value', name:'X', check:'Number'},{type:'input_value', name:'Y', check:'Number'},
+    {type:'input_value', name:'R', check:'Number'},{type:'input_value', name:'COLOR', check:'Colour'},{type:'field_checkbox', name:'FULL', checked:true}],
+    inputsInline:true, previousStatement:null, nextStatement:null, colour:C_SCR, tooltip:'Draws a circle around its centre point'},
+  {type:'scr_line', message0:'screen: line from x %1 y %2 to x %3 y %4 colour %5', args0:[
+    {type:'input_value', name:'X1', check:'Number'},{type:'input_value', name:'Y1', check:'Number'},
+    {type:'input_value', name:'X2', check:'Number'},{type:'input_value', name:'Y2', check:'Number'},{type:'input_value', name:'COLOR', check:'Colour'}],
+    inputsInline:true, previousStatement:null, nextStatement:null, colour:C_SCR, tooltip:'Draws a straight line between two points'},
+  {type:'scr_pixel', message0:'screen: dot at x %1 y %2 colour %3', args0:[
+    {type:'input_value', name:'X', check:'Number'},{type:'input_value', name:'Y', check:'Number'},{type:'input_value', name:'COLOR', check:'Colour'}],
+    inputsInline:true, previousStatement:null, nextStatement:null, colour:C_SCR, tooltip:'Colours a single pixel'},
+  {type:'scr_graph_add', message0:'screen: graph %1 colour %2', args0:[
+    {type:'input_value', name:'VALUE', check:'Number'},{type:'input_value', name:'COLOR', check:'Colour'}],
+    inputsInline:true, previousStatement:null, nextStatement:null, colour:C_SCR,
+    tooltip:'Adds one point to a live graph. Plug in any sensor. Use a different colour for each sensor to show several lines. Plug in compass heading to get a compass instead'},
+  {type:'scr_graph_start', message0:'screen: start graph from %1 to %2 title %3', args0:[
+    {type:'input_value', name:'LO', check:'Number'},{type:'input_value', name:'HI', check:'Number'},{type:'input_value', name:'TITLE'}],
+    inputsInline:true, previousStatement:null, nextStatement:null, colour:C_SCR,
+    tooltip:'Optional. Sets the lowest and highest value and a title. Without it, the graph picks its range by itself'},
+  {type:'scr_bright', message0:'screen: brightness %1 %', args0:[{type:'input_value', name:'P', check:'Number'}],
+    inputsInline:true, previousStatement:null, nextStatement:null, colour:C_SCR, tooltip:'0 = off, 100 = brightest'},
+  {type:'time_wait', message0:'wait %1 seconds', args0:[{type:'input_value', name:'S', check:'Number'}],
+    inputsInline:true, previousStatement:null, nextStatement:null, colour:C_TIME, tooltip:'Pauses before the next block'},
+  {type:'loop_forever', message0:'repeat forever', message1:'%1', args1:[{type:'input_statement', name:'DO'}],
+    previousStatement:null, colour:'#5B80A5', tooltip:'The blocks inside run again and again until you click Stop'},
+]);
+
+/* ---------- python ---------- */
+const P = python.pythonGenerator, O = python.Order;
+P.addReservedWords('lcd,display,Image,button_a,button_b,accelerometer,compass,microphone,pin_logo,pin0,pin1,pin2,music,radio,audio,Sound,sleep,temperature,set_volume,running_time');
+const v = (b, n, d) => P.valueToCode(b, n, O.NONE) || d;
+const useMusic = () => { P.definitions_['import_music'] = 'import music'; };
+const useRadio = () => { P.definitions_['import_radio'] = 'import radio\nradio.on()'; };
+P.forBlock['mb_icon'] = b => `display.show(Image.${b.getFieldValue('ICON')})\n`;
+P.forBlock['mb_draw'] = b => {
+  const rows = [0,1,2,3,4].map(r => [0,1,2,3,4].map(c => b.getFieldValue(`L${r}${c}`) === 'TRUE' ? '9' : '0').join(''));
+  return `display.show(Image('${rows.join(':')}'))\n`;
+};
+P.forBlock['mb_scroll'] = b => `display.scroll(str(${v(b,'TEXT',"''")}))\n`;
+P.forBlock['mb_plot'] = b => `display.set_pixel(int(${v(b,'X','0')}), int(${v(b,'Y','0')}), int(${v(b,'B','9')}))\n`;
+P.forBlock['mb_clear'] = () => 'display.clear()\n';
+P.forBlock['mb_button'] = b => { const k = b.getFieldValue('BTN');
+  return [k === 'ab' ? '(button_a.is_pressed() and button_b.is_pressed())' : `button_${k}.is_pressed()`, k === 'ab' ? O.ATOMIC : O.FUNCTION_CALL]; };
+P.forBlock['mb_button_was'] = b => [`button_${b.getFieldValue('BTN')}.was_pressed()`, O.FUNCTION_CALL];
+P.forBlock['mb_logo'] = () => ['pin_logo.is_touched()', O.FUNCTION_CALL];
+P.forBlock['mb_gesture'] = b => { const g = b.getFieldValue('G');
+  return [`accelerometer.${g === 'shake' || g === 'freefall' ? 'was' : 'is'}_gesture('${g}')`, O.FUNCTION_CALL]; };
+P.forBlock['mb_accel'] = b => [`accelerometer.get_${b.getFieldValue('AXIS')}()`, O.FUNCTION_CALL];
+P.forBlock['mb_light'] = () => ['display.read_light_level()', O.FUNCTION_CALL];
+P.forBlock['mb_temp'] = () => ['temperature()', O.FUNCTION_CALL];
+P.forBlock['mb_compass'] = () => ['compass.heading()', O.FUNCTION_CALL];
+P.forBlock['mb_sound_level'] = () => ['microphone.sound_level()', O.FUNCTION_CALL];
+P.forBlock['mb_melody'] = b => { useMusic(); return `music.play(music.${b.getFieldValue('M')})\n`; };
+P.forBlock['mb_tone'] = b => { useMusic(); return `music.pitch(int(${v(b,'F','440')}), int(${v(b,'S','0.5')} * 1000))\n`; };
+P.forBlock['mb_sound'] = b => `audio.play(Sound.${b.getFieldValue('S')})\n`;
+P.forBlock['mb_volume'] = b => `set_volume(int(${v(b,'V','128')}))\n`;
+P.forBlock['mb_radio_group'] = b => { useRadio(); return `radio.config(group=int(${v(b,'G','1')}))\n`; };
+P.forBlock['mb_radio_send'] = b => { useRadio(); return `radio.send(str(${v(b,'TEXT',"''")}))\n`; };
+P.forBlock['mb_radio_receive'] = () => { useRadio(); return ["(radio.receive() or '')", O.ATOMIC]; };
+P.forBlock['mb_pin_write'] = b => `pin${b.getFieldValue('PIN')}.write_digital(${b.getFieldValue('ON')})\n`;
+P.forBlock['mb_pin_read'] = b => [`(pin${b.getFieldValue('PIN')}.read_digital() == 1)`, O.ATOMIC];
+P.forBlock['mb_pin_analog'] = b => [`pin${b.getFieldValue('PIN')}.read_analog()`, O.FUNCTION_CALL];
+P.forBlock['mb_pin_touch'] = b => [`pin${b.getFieldValue('PIN')}.is_touched()`, O.FUNCTION_CALL];
+/* Blockly's own "change by" imports the numbers module, which MicroPython doesn't have. */
+P.forBlock['math_change'] = (b, g) => { const n = g.getVariableName(b.getFieldValue('VAR'));
+  return `${n} = (${n} if isinstance(${n}, (int, float)) else 0) + ${v(b,'DELTA','0')}\n`; };
+const useLcd = () => { P.definitions_['import_lcd'] = 'import lcd'; };
+const filled = b => b.getFieldValue('FULL') === 'TRUE' ? 'True' : 'False';
+P.forBlock['scr_color'] = b => { useLcd(); return [`lcd.${b.getFieldValue('C')}`, O.MEMBER]; };
+P.forBlock['scr_rgb'] = b => { useLcd(); return [`lcd.rgb(${v(b,'R','0')}, ${v(b,'G','0')}, ${v(b,'B','0')})`, O.FUNCTION_CALL]; };
+P.forBlock['scr_random'] = () => { useLcd(); return ['lcd.random_color()', O.FUNCTION_CALL]; };
+P.forBlock['scr_fill'] = b => { useLcd(); return `lcd.fill(${v(b,'COLOR','lcd.BLACK')})\n`; };
+P.forBlock['scr_text'] = b => { useLcd(); return `lcd.text(${v(b,'TEXT',"''")}, ${v(b,'X','0')}, ${v(b,'Y','0')}, ${b.getFieldValue('SIZE')}, ${v(b,'COLOR','lcd.WHITE')})\n`; };
+P.forBlock['scr_shape'] = b => { useLcd(); return `lcd.shape('${b.getFieldValue('SHAPE')}', ${v(b,'X','80')}, ${v(b,'Y','64')}, ${v(b,'SIZE','48')}, ${v(b,'COLOR','lcd.WHITE')})\n`; };
+P.forBlock['scr_icon'] = b => { useLcd(); return `lcd.icon('${b.getFieldValue('ICON')}', ${v(b,'X','80')}, ${v(b,'Y','64')}, ${v(b,'SIZE','60')}, ${v(b,'COLOR','lcd.RED')})\n`; };
+P.forBlock['scr_rect'] = b => { useLcd(); return `lcd.rect(${v(b,'X','0')}, ${v(b,'Y','0')}, ${v(b,'W','10')}, ${v(b,'H','10')}, ${v(b,'COLOR','lcd.WHITE')}, ${filled(b)})\n`; };
+P.forBlock['scr_circle'] = b => { useLcd(); return `lcd.circle(${v(b,'X','80')}, ${v(b,'Y','64')}, ${v(b,'R','10')}, ${v(b,'COLOR','lcd.WHITE')}, ${filled(b)})\n`; };
+P.forBlock['scr_line'] = b => { useLcd(); return `lcd.line(${v(b,'X1','0')}, ${v(b,'Y1','0')}, ${v(b,'X2','0')}, ${v(b,'Y2','0')}, ${v(b,'COLOR','lcd.WHITE')})\n`; };
+P.forBlock['scr_pixel'] = b => { useLcd(); return `lcd.pixel(${v(b,'X','0')}, ${v(b,'Y','0')}, ${v(b,'COLOR','lcd.WHITE')})\n`; };
+P.forBlock['scr_graph_add'] = b => { useLcd();
+  const src = b.getInputTargetBlock('VALUE');
+  if (src && src.type === 'mb_compass') {  /* a compass sensor gets a compass dial instead of a line graph */
+    P.definitions_['compass_reset'] = 'lcd.compass_start()  # every run draws a fresh dial';
+    return `lcd.compass_dial(${v(b,'VALUE','0')}, ${v(b,'COLOR','lcd.YELLOW')})\n`;
+  }
+  P.definitions_['graph_reset'] = 'lcd.graph()  # every run starts a fresh graph'; return `lcd.graph_add(${v(b,'VALUE','0')}, ${v(b,'COLOR','lcd.YELLOW')})\n`; };
+P.forBlock['scr_graph_start'] = b => { useLcd(); return `lcd.graph(${v(b,'LO','0')}, ${v(b,'HI','100')}, str(${v(b,'TITLE',"''")}))\n`; };
+P.forBlock['scr_bright'] = b => { useLcd(); return `lcd.brightness(${v(b,'P','100')})\n`; };
+P.forBlock['time_wait'] = b => `sleep(int(${v(b,'S','1')} * 1000))\n`;
+P.forBlock['loop_forever'] = (b, g) => 'while True:\n' + (g.statementToCode(b,'DO') || g.INDENT + 'pass\n') + g.INDENT + 'sleep(10)\n';
+
+
+/* ---------- my pictures (uploaded from the computer for the colour screen) ---------- */
+const PIC_MAX = 32;          // pictures are shrunk to fit 32 x 32 pixels
+const PIC_SEE = 0x0020;      // colour code that means "see-through" on the micro:bit
+let PICS = [];
+try { PICS = JSON.parse(localStorage.getItem('led-workshop-pictures') || '[]'); } catch(e) { PICS = []; }
+function savePics(){ try { localStorage.setItem('led-workshop-pictures', JSON.stringify(PICS)); } catch(e) {} }
+const picOptions = () => PICS.length
+  ? PICS.map(p => [{src:p.preview, width:32, height:32, alt:p.name}, p.name])
+  : [[T('add a picture first'), '']];
+
+defineBlocksT([
+  {type:'scr_picture', message0:'screen: draw picture %1 at x %2 y %3 size %4', args0:[
+    {type:'field_dropdown', name:'PIC', options: picOptions},
+    {type:'input_value', name:'X', check:'Number'},{type:'input_value', name:'Y', check:'Number'},
+    {type:'input_value', name:'SIZE', check:'Number'}],
+    inputsInline:true, previousStatement:null, nextStatement:null, colour:C_SCR,
+    tooltip:'Draws a picture you added from your computer. x,y is its centre and size is how wide it is'},
+]);
+P.forBlock['scr_picture'] = b => {
+  const n = b.getFieldValue('PIC');
+  if (!n) return '# add a picture first\n';
+  useLcd();
+  return `lcd.picture('${n}', ${v(b,'X','80')}, ${v(b,'Y','64')}, ${v(b,'SIZE','64')})\n`;
+};
+
+function picName(file){
+  let base = (file.name || 'pic').replace(/\.[^.]*$/, '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 8) || 'pic';
+  let name = base, i = 2;
+  while (PICS.some(p => p.name === name)) name = base.slice(0, 6) + (i++);
+  return name;
+}
+async function processPicture(file){
+  const url = URL.createObjectURL(file);
+  const img = await new Promise((res, rej) => { const el = document.createElement('img');
+    el.onload = () => res(el); el.onerror = rej; el.src = url; });
+  URL.revokeObjectURL(url);
+  const sc = Math.min(PIC_MAX / img.naturalWidth, PIC_MAX / img.naturalHeight);
+  const w = Math.max(1, Math.round(img.naturalWidth * sc)), h = Math.max(1, Math.round(img.naturalHeight * sc));
+  const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+  const cx = cv.getContext('2d'); cx.imageSmoothingQuality = 'high'; cx.drawImage(img, 0, 0, w, h);
+  const id = cx.getImageData(0, 0, w, h), d = id.data;
+  const see = new Uint8Array(w * h);
+  let anyAlpha = false;
+  for (let i = 0; i < w * h; i++) if (d[i*4+3] < 128) { see[i] = 1; anyAlpha = true; }
+  if (!anyAlpha) {
+    /* No see-through parts: if the corners share a colour, treat that background as see-through. */
+    const at = i => [d[i*4], d[i*4+1], d[i*4+2]];
+    const near = (a, b) => Math.abs(a[0]-b[0]) <= 60 && Math.abs(a[1]-b[1]) <= 60 && Math.abs(a[2]-b[2]) <= 60;
+    const bg = at(0);
+    if ([w-1, (h-1)*w, h*w-1].every(i => near(at(i), bg))) {
+      const stack = [];
+      for (let x = 0; x < w; x++) stack.push(x, (h-1)*w + x);
+      for (let y = 0; y < h; y++) stack.push(y*w, y*w + w - 1);
+      while (stack.length) {
+        const i = stack.pop();
+        if (see[i] || !near(at(i), bg)) continue;
+        see[i] = 1;
+        const x = i % w, y = (i - x) / w;
+        if (x > 0) stack.push(i - 1); if (x < w - 1) stack.push(i + 1);
+        if (y > 0) stack.push(i - w); if (y < h - 1) stack.push(i + w);
+      }
+    }
+  }
+  const bytes = new Uint8Array(2 + w * h * 2); bytes[0] = w; bytes[1] = h;
+  for (let i = 0; i < w * h; i++) {
+    let c = PIC_SEE;
+    if (!see[i]) { c = ((d[i*4] & 0xF8) << 8) | ((d[i*4+1] & 0xFC) << 3) | (d[i*4+2] >> 3); if (c === PIC_SEE) c = 0; }
+    else d[i*4+3] = 0;
+    bytes[2 + i*2] = c >> 8; bytes[3 + i*2] = c & 255;
+  }
+  cx.putImageData(id, 0, 0);
+  let bin = ''; bytes.forEach(b => bin += String.fromCharCode(b));
+  return {name: picName(file), w, h, data: btoa(bin), preview: cv.toDataURL('image/png')};
+}
+
+function renderPicList(){
+  const box = document.getElementById('picList'); if (!box) return;
+  box.innerHTML = '';
+  if (!PICS.length) { box.innerHTML = '<p>No pictures yet. Add one, then use the <b>screen: draw picture</b> block.</p>'; return; }
+  PICS.forEach(p => {
+    const row = document.createElement('div'); row.className = 'pic-row';
+    row.innerHTML = `<img src="${p.preview}" alt="" width="32" height="32"><span><b>${p.name}</b> · ${p.w}×${p.h}</span>`;
+    const rm = document.createElement('button'); rm.className = 'btn'; rm.textContent = 'Remove';
+    rm.onclick = () => { PICS = PICS.filter(q => q !== p); savePics(); renderPicList(); Blockly.getMainWorkspace().refreshToolboxSelection(); };
+    row.appendChild(rm); box.appendChild(row);
+  });
+}
+function setupPictures(ws){
+  const input = document.createElement('input'); input.type = 'file'; input.accept = 'image/*'; input.hidden = true;
+  document.body.appendChild(input);
+  const pick = () => input.click();
+  ws.registerButtonCallback('ADD_PICTURE', pick);
+  const btn = document.getElementById('btnAddPic'); if (btn) btn.onclick = pick;
+  input.onchange = async () => {
+    const f = input.files[0]; input.value = ''; if (!f) return;
+    try {
+      const p = await processPicture(f);
+      PICS.push(p); savePics(); renderPicList(); ws.refreshToolboxSelection();
+      log(`Added the picture "${p.name}". Pick it in the "screen: draw picture" block.`, 'ok');
+    } catch(e) { log('Couldn\'t read that file. Choose a picture file like PNG or JPG.', 'err'); }
+  };
+  renderPicList();
+}
+
+/* Sends the pictures a program uses to the micro:bit (once per connection, or again if a picture changed). */
+async function ensurePictures(){
+  const used = [...new Set([...program().matchAll(/lcd\.picture\('([a-z0-9]+)'/g)].map(m => m[1]))];
+  S.picsSent = S.picsSent || {};
+  for (const n of used) {
+    const p = PICS.find(q => q.name === n);
+    if (!p || S.picsSent[n] === p.data) continue;
+    setStatus('busy', 'Sending picture…');
+    const bytes = Uint8Array.from(atob(p.data), c => c.charCodeAt(0));
+    let r = await execRaw(`f=open('p_${n}.bin','wb')`);
+    if (r.err) throw new Error(r.err);
+    for (let i = 0; i < bytes.length; i += 96) {
+      const lit = Array.from(bytes.slice(i, i + 96), b => '\\x' + b.toString(16).padStart(2, '0')).join('');
+      r = await execRaw(`f.write(b'${lit}')`);
+      if (r.err) throw new Error(r.err);
+    }
+    r = await execRaw('f.close()');
+    if (r.err) throw new Error(r.err);
+    S.picsSent[n] = p.data;
+  }
+}
+
+/* ---------- toolbox ---------- */
+const toolbox = {kind:'categoryToolbox', contents:[
+  {kind:'category', name:'LEDs', colour:C_LED, contents:[
+    {kind:'block', type:'mb_icon', fields:{ICON:'HEART'}},
+    {kind:'block', type:'mb_draw'},
+    {kind:'block', type:'mb_scroll', inputs:{TEXT:txt('Hello!')}},
+    {kind:'block', type:'mb_plot', inputs:{X:num(2), Y:num(2), B:num(9)}},
+    {kind:'block', type:'mb_clear'}]},
+  {kind:'category', name:'Colour screen', colour:C_SCR, contents:[
+    {kind:'block', type:'scr_fill', inputs:{COLOR:col('BLACK')}},
+    {kind:'block', type:'scr_text', fields:{SIZE:'2'}, inputs:{TEXT:txt('Hello!'), X:num(8), Y:num(8), COLOR:col('WHITE')}},
+    {kind:'block', type:'scr_shape', fields:{SHAPE:'cat'}, inputs:{X:num(80), Y:num(64), SIZE:num(64), COLOR:col('ORANGE')}},
+    {kind:'block', type:'scr_icon', fields:{ICON:'HEART'}, inputs:{X:num(80), Y:num(64), SIZE:num(60), COLOR:col('RED')}},
+    {kind:'button', text:'＋ Add a picture from your computer', callbackKey:'ADD_PICTURE'},
+    {kind:'block', type:'scr_picture', inputs:{X:num(80), Y:num(64), SIZE:num(64)}},
+    {kind:'block', type:'scr_circle', inputs:{X:num(80), Y:num(64), R:num(20), COLOR:col('YELLOW')}},
+    {kind:'block', type:'scr_rect', inputs:{X:num(10), Y:num(10), W:num(50), H:num(30), COLOR:col('BLUE')}},
+    {kind:'block', type:'scr_line', inputs:{X1:num(0), Y1:num(0), X2:num(159), Y2:num(127), COLOR:col('RED')}},
+    {kind:'block', type:'scr_pixel', inputs:{X:num(80), Y:num(64), COLOR:col('WHITE')}},
+    {kind:'label', text:'Live graph'},
+    {kind:'block', type:'scr_graph_add', inputs:{VALUE:{block:{type:'mb_light'}}, COLOR:col('YELLOW')}},
+    {kind:'block', type:'scr_graph_start', inputs:{LO:num(-1024), HI:num(1024), TITLE:txt('Tilt')}},
+    {kind:'block', type:'scr_bright', inputs:{P:num(100)}}]},
+  {kind:'category', name:'Colours', colour:C_COLOR, contents:[
+    {kind:'block', type:'scr_color', fields:{C:'RED'}},
+    {kind:'block', type:'scr_random'},
+    {kind:'block', type:'scr_rgb', inputs:{R:num(255), G:num(120), B:num(0)}}]},
+  {kind:'category', name:'Sensors', colour:C_INPUT, contents:[
+    {kind:'block', type:'mb_button'},
+    {kind:'block', type:'mb_button_was'},
+    {kind:'block', type:'mb_logo'},
+    {kind:'block', type:'mb_gesture'},
+    {kind:'block', type:'mb_accel'},
+    {kind:'block', type:'mb_light'},
+    {kind:'block', type:'mb_temp'},
+    {kind:'block', type:'mb_compass'},
+    {kind:'block', type:'mb_sound_level'}]},
+  {kind:'category', name:'Music', colour:C_MUSIC, contents:[
+    {kind:'block', type:'mb_melody'},
+    {kind:'block', type:'mb_tone', inputs:{F:num(440), S:num(0.5)}},
+    {kind:'block', type:'mb_sound'},
+    {kind:'block', type:'mb_volume', inputs:{V:num(128)}}]},
+  {kind:'category', name:'Radio', colour:C_RADIO, contents:[
+    {kind:'block', type:'mb_radio_group', inputs:{G:num(1)}},
+    {kind:'block', type:'mb_radio_send', inputs:{TEXT:txt('hi')}},
+    {kind:'block', type:'mb_radio_receive'}]},
+  {kind:'category', name:'Pins', colour:C_PINS, contents:[
+    {kind:'block', type:'mb_pin_write'},
+    {kind:'block', type:'mb_pin_read'},
+    {kind:'block', type:'mb_pin_analog'},
+    {kind:'block', type:'mb_pin_touch'}]},
+  {kind:'category', name:'Time & loops', colour:'#5B80A5', contents:[
+    {kind:'block', type:'time_wait', inputs:{S:num(1)}},
+    {kind:'block', type:'loop_forever'},
+    {kind:'block', type:'controls_repeat_ext', inputs:{TIMES:num(10)}},
+    {kind:'block', type:'controls_whileUntil'},
+    {kind:'block', type:'controls_for', inputs:{FROM:num(0), TO:num(4), BY:num(1)}}]},
+  {kind:'category', name:'Logic', categorystyle:'logic_category', contents:[
+    {kind:'block', type:'controls_if'},
+    {kind:'block', type:'controls_if', extraState:{hasElse:true}},
+    {kind:'block', type:'logic_compare'},
+    {kind:'block', type:'logic_operation'},
+    {kind:'block', type:'logic_negate'},
+    {kind:'block', type:'logic_boolean'}]},
+  {kind:'category', name:'Math', categorystyle:'math_category', contents:[
+    {kind:'block', type:'math_number', fields:{NUM:0}},
+    {kind:'block', type:'math_arithmetic', inputs:{A:num(1), B:num(1)}},
+    {kind:'block', type:'math_random_int', inputs:{FROM:num(1), TO:num(6)}},
+    {kind:'block', type:'math_modulo', inputs:{DIVIDEND:num(10), DIVISOR:num(3)}},
+    {kind:'block', type:'math_round'}]},
+  {kind:'category', name:'Text', categorystyle:'text_category', contents:[
+    {kind:'block', type:'text'},
+    {kind:'block', type:'text_join'},
+    {kind:'block', type:'text_print', inputs:{TEXT:txt('hi')}}]},
+  {kind:'category', name:'Variables', categorystyle:'variable_category', custom:'VARIABLE'},
+]};
+
+/* ---------- examples ---------- */
+const S_ = (t, f, inner='') => `<block type="${t}">${f}${inner}</block>`;
+const sNum = (name, n) => `<value name="${name}"><shadow type="math_number"><field name="NUM">${n}</field></shadow></value>`;
+const sTxt = (name, t) => `<value name="${name}"><shadow type="text"><field name="TEXT">${t}</field></shadow></value>`;
+const nxt = b => `<next>${b}</next>`;
+const sCol = (name, c) => `<value name="${name}"><shadow type="scr_color"><field name="C">${c}</field></shadow></value>`;
+const wrap = (b, x=40, y=40) => `<xml xmlns="https://developers.google.com/blockly/xml">${b.replace('<block ', `<block x="${x}" y="${y}" `)}</xml>`;
+const ifDo = (cond, body) => `<block type="controls_if"><value name="IF0">${cond}</value><statement name="DO0">${body}</statement>`;
+const EXAMPLES = {
+  'Hello world': wrap(
+    S_('mb_scroll', sTxt('TEXT','Hello!'),
+      nxt(S_('mb_icon', '<field name="ICON">HEART</field>')))),
+  'Beating heart': wrap(
+    S_('loop_forever', `<statement name="DO">${
+      S_('mb_icon', '<field name="ICON">HEART</field>',
+        nxt(S_('time_wait', sNum('S',0.5),
+          nxt(S_('mb_icon', '<field name="ICON">HEART_SMALL</field>',
+            nxt(S_('time_wait', sNum('S',0.5))))))))}</statement>`)),
+  'Dice': wrap(
+    S_('mb_icon', '<field name="ICON">SQUARE</field>',
+      nxt(S_('loop_forever', `<statement name="DO">${
+        ifDo('<block type="mb_gesture"><field name="G">shake</field></block>',
+          S_('mb_scroll', '<value name="TEXT"><block type="math_random_int">' + sNum('FROM',1) + sNum('TO',6) + '</block></value>')) + '</block>'}</statement>`)))),
+  'Buttons': wrap(
+    S_('loop_forever', `<statement name="DO">${
+      ifDo('<block type="mb_button"><field name="BTN">a</field></block>', S_('mb_icon', '<field name="ICON">HAPPY</field>')) +
+        nxt(ifDo('<block type="mb_button"><field name="BTN">b</field></block>', S_('mb_icon', '<field name="ICON">SAD</field>')) + '</block>') + '</block>'}</statement>`)),
+  'Colour screen': wrap(
+    S_('scr_fill', sCol('COLOR','BLUE'),
+      nxt(S_('scr_text', `${sTxt('TEXT','Zoo')}${sNum('X',62)}${sNum('Y',4)}<field name="SIZE">2</field>${sCol('COLOR','YELLOW')}`,
+        nxt(S_('scr_shape', `<field name="SHAPE">dog</field>${sNum('X',30)}${sNum('Y',50)}${sNum('SIZE',48)}${sCol('COLOR','BROWN')}`,
+          nxt(S_('scr_shape', `<field name="SHAPE">cat</field>${sNum('X',80)}${sNum('Y',50)}${sNum('SIZE',48)}${sCol('COLOR','ORANGE')}`,
+            nxt(S_('scr_shape', `<field name="SHAPE">frog</field>${sNum('X',130)}${sNum('Y',50)}${sNum('SIZE',48)}${sCol('COLOR','GREEN')}`,
+              nxt(S_('scr_icon', `<field name="ICON">HEART</field>${sNum('X',80)}${sNum('Y',100)}${sNum('SIZE',40)}${sCol('COLOR','RED')}`)))))))))))),
+  'Light graph': wrap(
+    S_('loop_forever', `<statement name="DO">${
+      S_('scr_graph_add', `<value name="VALUE"><block type="mb_light"></block></value>${sCol('COLOR','YELLOW')}`,
+        nxt(S_('time_wait', sNum('S',0.1))))}</statement>`)),
+  'Tilt graph': wrap(
+    S_('scr_graph_start', `${sNum('LO',-1024)}${sNum('HI',1024)}${sTxt('TITLE','Tilt')}`,
+      nxt(S_('loop_forever', `<statement name="DO">${
+        S_('scr_graph_add', `<value name="VALUE"><block type="mb_accel"><field name="AXIS">x</field></block></value>${sCol('COLOR','RED')}`,
+          nxt(S_('scr_graph_add', `<value name="VALUE"><block type="mb_accel"><field name="AXIS">y</field></block></value>${sCol('COLOR','CYAN')}`,
+            nxt(S_('time_wait', sNum('S',0.05))))))}</statement>`)))),
+  'Compass': wrap(
+    S_('loop_forever', `<statement name="DO">${
+      S_('scr_graph_add', `<value name="VALUE"><block type="mb_compass"></block></value>${sCol('COLOR','YELLOW')}`,
+        nxt(S_('time_wait', sNum('S',0.1))))}</statement>`)),
+  'Radio chat': wrap(
+    S_('mb_radio_group', sNum('G',1),
+      nxt(S_('loop_forever', `<statement name="DO">${
+        ifDo('<block type="mb_button_was"><field name="BTN">a</field></block>',
+          S_('mb_radio_send', sTxt('TEXT','hi'), nxt(S_('mb_icon', '<field name="ICON">YES</field>')))) +
+        nxt(ifDo('<block type="logic_compare"><field name="OP">EQ</field><value name="A"><block type="mb_radio_receive"></block></value>' + sTxt('B','hi') + '</block>',
+          S_('mb_icon', '<field name="ICON">HAPPY</field>', nxt(S_('mb_melody', '<field name="M">BA_DING</field>')))) + '</block>') + '</block>'}</statement>`)))),
+};
+
+/* ---------- workspace ---------- */
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const theme = Blockly.Theme.defineTheme('workbench', {
+  base: Blockly.Themes.Classic,
+  componentStyles: {
+    workspaceBackgroundColour: css('--surface'), toolboxBackgroundColour: css('--sunk'),
+    toolboxForegroundColour: css('--ink'), flyoutBackgroundColour: css('--sunk'),
+    flyoutForegroundColour: css('--ink'), scrollbarColour: css('--line'), insertionMarkerColour: css('--ink')},
+  fontStyle: {family: 'Rubik, Noto Sans Arabic, Segoe UI, Arial, sans-serif', weight: '500', size: 12},
+});
+const ws = Blockly.inject('blocklyDiv', {
+  toolbox: trToolbox(toolbox), rtl: RTL, renderer: 'zelos', theme, trashcan: false, sounds: false,
+  zoom: {controls: false, wheel: true, startScale: 0.8, maxScale: 2, minScale: 0.4},
+  grid: {spacing: 28, length: 2, colour: css('--line'), snap: true},
+});
+setupPictures(ws);
+function loadXml(xml){ ws.clear(); Blockly.Xml.domToWorkspace(Blockly.utils.xml.textToDom(xml), ws); ws.scrollCenter(); }
+function program(){ return 'from microbit import *\ndisplay.clear()\n' + P.workspaceToCode(ws); }
+
+let saved = null;
+try { saved = localStorage.getItem('led-workshop-project'); } catch(e) {}
+try { if (saved) Blockly.serialization.workspaces.load(JSON.parse(saved), ws); else loadXml(EXAMPLES['Hello world']); }
+catch(e) { loadXml(EXAMPLES['Hello world']); }
+
+let tCode;
+ws.addChangeListener(e => {
+  if (e.isUiEvent) return;
+  clearTimeout(tCode);
+  tCode = setTimeout(() => {
+    $('code').textContent = program();
+    try { localStorage.setItem('led-workshop-project', JSON.stringify(Blockly.serialization.workspaces.save(ws))); } catch(e) {}
+  }, 250);
+});
+$('code').textContent = program();
+
+const exBox = $('examples');
+Object.keys(EXAMPLES).forEach(name => {
+  const b = document.createElement('button'); b.className = 'btn'; b.textContent = name;
+  b.onclick = () => { loadXml(EXAMPLES[name]); log(`Loaded "${name}". Click Run.`, 'ok'); showTab('p-log'); };
+  exBox.appendChild(b);
+});
+
+/* ---------- side tabs ---------- */
+function showTab(id){
+  document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', t.dataset.p === id ? 'true' : 'false'));
+  document.querySelectorAll('.pane').forEach(p => p.hidden = p.id !== id);
+  Blockly.svgResize(ws);
+}
+document.querySelectorAll('.tab').forEach(t => t.onclick = () => showTab(t.dataset.p));
+window.addEventListener('resize', () => Blockly.svgResize(ws));
+
+/* ---------- messages ---------- */
+let outEl = null;
+function log(text, kind='info', detail=''){
+  outEl = null;
+  const d = document.createElement('div'); d.className = 'msg ' + kind; d.textContent = text;
+  if (detail) { const det = document.createElement('details'); det.innerHTML = '<summary>Details for the teacher</summary>';
+    const pre = document.createElement('pre'); pre.textContent = detail; det.appendChild(pre); d.appendChild(det); }
+  $('log').appendChild(d); d.scrollIntoView({block:'end'});
+}
+function out(text){
+  if (!outEl) { outEl = document.createElement('div'); outEl.className = 'msg out'; $('log').appendChild(outEl); }
+  outEl.textContent += text; outEl.scrollIntoView({block:'end'});
+}
+function setStatus(s, text){ $('status').dataset.s = s; $('statusText').textContent = text; }
+function notice(html){ $('notice').innerHTML = html; $('notice').hidden = false; }
+
+function friendly(err){
+  if (/KeyboardInterrupt/.test(err)) return ['The program stopped.', 'info'];
+  if (/pin_logo|microphone|set_volume|Sound|audio/.test(err) && /(NameError|AttributeError|ImportError)/.test(err)) return ['This block needs a micro:bit V2 (the one with a gold logo and a speaker).', 'err'];
+  if (/set_pixel|index out of bounds|brightness/.test(err) || (/ValueError/.test(err) && /pixel/.test(err))) return ['An LED block got a number that is too big or too small. x and y go from 0 to 4, brightness from 0 to 9.', 'err'];
+  if (/NO_PICTURE/.test(err)) return ['That picture isn\'t on the micro:bit yet. Click Run again to send it.', 'err'];
+  if (/ImportError/.test(err) && /lcd/.test(err)) return ['The colour screen library is missing. Unplug and reconnect the micro:bit, then click Run again.', 'err'];
+  if (/ENOSPC/.test(err)) return ['The micro:bit\'s storage is full. Use fewer or smaller pictures, then click Run again.', 'err'];
+  if (/NameError/.test(err)) return ['You used a variable before giving it a value.', 'err'];
+  if (/ZeroDivisionError/.test(err)) return ['You tried to divide by zero.', 'err'];
+  if (/TypeError/.test(err)) return ['A block got the wrong kind of value, like text where a number should go.', 'err'];
+  if (/ValueError/.test(err)) return ['A block got a number it can\'t use. Check the numbers in your blocks.', 'err'];
+  if (/SyntaxError|IndentationError/.test(err)) return ['A block isn\'t connected properly. Check that all your blocks snap together.', 'err'];
+  if (/MemoryError/.test(err)) return ['The micro:bit ran out of memory. Try fewer blocks or shorter text.', 'err'];
+  return ['Something went wrong in the program.', 'err'];
+}
+
+/* ---------- serial link ---------- */
+const S = {port:null, reader:null, writer:null, rx:'', stream:null, busy:false};
+const enc = new TextEncoder();
+const hasSerial = 'serial' in navigator;
+if (!hasSerial) notice('Connecting to the micro:bit works in <b>Chrome</b> or <b>Edge</b> on a computer. In this browser you can build programs and see the code, but not run them on the micro:bit.');
+
+async function write(s){ await S.writer.write(enc.encode(s)); }
+function onText(t){
+  if (!S.stream) { S.rx += t; if (S.rx.length > 40000) S.rx = S.rx.slice(-20000); if (S.passthrough) out(t.replace(/\r/g,'')); return; }
+  for (const ch of t) {
+    const st = S.stream; if (!st) { S.rx += ch; continue; }
+    if (st.phase === 'ok') { st.buf += ch; if (st.buf.endsWith('OK')) st.phase = 'out'; }
+    else if (st.phase === 'out') { if (ch === '\x04') st.phase = 'err'; else if (ch !== '\r') out(ch); }
+    else if (st.phase === 'err') { if (ch === '\x04') { st.phase = 'end'; finishRun(st.err); } else st.err += ch; }
+    else if (st.phase === 'end') { if (ch === '>') S.stream = null; }
+  }
+}
+function waitFor(token, ms=4000){
+  return new Promise((res, rej) => {
+    const t0 = Date.now();
+    (function poll(){
+      const i = S.rx.indexOf(token);
+      if (i >= 0) { const before = S.rx.slice(0, i); S.rx = S.rx.slice(i + token.length); res(before); }
+      else if (Date.now() - t0 > ms) rej(new Error('timeout ' + JSON.stringify(token)));
+      else setTimeout(poll, 15);
+    })();
+  });
+}
+async function readLoop(){
+  const dec = new TextDecoder();
+  while (S.port && S.port.readable) {
+    S.reader = S.port.readable.getReader();
+    try { for (;;) { const {value, done} = await S.reader.read(); if (done) break; onText(dec.decode(value, {stream:true})); } }
+    catch(e) { break; }
+    finally { try { S.reader.releaseLock(); } catch(e) {} }
+  }
+  lost();
+}
+function lost(){
+  if (!S.port) return;
+  S.port = null; S.writer = null; S.stream = null; S.ready = false; S.libsOk = {}; S.picsSent = {};
+  setStatus('off', 'Not connected'); $('btnConnect').querySelector('span').textContent = 'Connect micro:bit';
+  log('The micro:bit was disconnected.', 'info');
+}
+async function sendChunks(code){
+  const bytes = enc.encode(code);
+  for (let i = 0; i < bytes.length; i += 64) { await S.writer.write(bytes.slice(i, i + 64)); await sleep(15); }
+}
+const DEVICE = 'micro:bit';
+async function enterRaw(){
+  /* Stop whatever is running and switch to raw mode. Some boards are slow to answer, so try a few times. */
+  S.stream = null; S.passthrough = false;
+  let heard = '';
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await write('\r\x03'); await sleep(150 + attempt * 150);
+    await write('\x03'); await sleep(150 + attempt * 150);
+    await write('\x02'); await sleep(200 + attempt * 200);
+    heard += S.rx; S.rx = '';
+    await write('\x01');
+    try { await waitFor('raw REPL; CTRL-B to exit\r\n>', 2000 + attempt * 1000); S.ready = true; return; }
+    catch(e) { heard += S.rx; S.rx = ''; }
+  }
+  S.ready = false;
+  const seen = heard.replace(/[^\x20-\x7e\n]/g, '').trim().slice(-300);
+  const err = new Error(seen ? 'The ' + DEVICE + ' answered but not in MicroPython raw mode. It sent: ' + seen
+                             : 'The ' + DEVICE + ' sent nothing back. MicroPython is probably not installed, or the ' + DEVICE + ' needs a reset.');
+  err.noAnswer = true;
+  throw err;
+}
+async function softReset(){
+  /* Restart MicroPython so a library that was just installed or updated is loaded fresh,
+     not the old copy still sitting in memory. Then come back to raw mode. */
+  await write('\x02'); await sleep(200);
+  await write('\x04'); await sleep(1500);
+  await enterRaw();
+}
+function noAnswerHelp(e){
+  log(`The ${DEVICE} isn't answering. Press the reset button on the ${DEVICE} and click Run again. If it keeps happening, MicroPython is probably not on it yet: click "First-time setup".`, 'err', String(e && e.message || e));
+  setStatus('on', 'Connected, no MicroPython');
+}
+async function execRaw(code, ms=8000){
+  S.rx = '';
+  await sendChunks(code); await write('\x04');
+  await waitFor('OK', 3000);
+  const o = await waitFor('\x04', ms);
+  const e = await waitFor('\x04', 3000);
+  await waitFor('>', 2000);
+  return {out:o, err:e};
+}
+async function uploadFile(name, content){
+  /* The micro:bit file system has no append mode, so keep one file open while writing. */
+  let r = await execRaw(`f=open('${name}','w')`);
+  if (r.err) throw new Error(r.err);
+  for (let i = 0; i < content.length; i += 200) {
+    r = await execRaw(`f.write(${JSON.stringify(content.slice(i, i + 200))})`);
+    if (r.err) throw new Error(r.err);
+  }
+  r = await execRaw('f.close()');
+  if (r.err) throw new Error(r.err);
+}
+async function ensureLibrary(){
+  const r = await execRaw("import microbit\nprint('MICROBIT_OK')");
+  if (!r.out.includes('MICROBIT_OK')) throw new Error(r.err || 'not a micro:bit');
+}
+
+/* ---------- colour screen library: small files, sent only when a program needs them ---------- */
+const LCD_LIBS = JSON.parse(document.getElementById('lcdlibs').textContent);
+const libTag = n => LCD_LIBS[n].split('\n')[0].trim();
+function libsNeeded(code){
+  if (!code.includes('import lcd')) return [];
+  const need = ['lcd'];
+  if (/lcd\.shape\(/.test(code)) need.push('lcd_shape');
+  if (/lcd\.picture\(/.test(code)) need.push('lcd_pic');
+  if (/lcd\.graph/.test(code)) need.push('lcd_graph');
+  if (/lcd\.compass_/.test(code)) need.push('lcd_compass');
+  return need;
+}
+const picFiles = code => [...code.matchAll(/lcd\.picture\('([a-z0-9]+)'/g)].map(m => 'p_' + m[1] + '.bin');
+
+/* Removes screen-library parts and pictures the current program doesn't use, to make room. main.py stays. */
+async function freeSpace(){
+  const code = program();
+  const keep = [...libsNeeded(code).map(n => n + '.py'), ...picFiles(code), 'main.py'];
+  const r = await execRaw("import os\nfor n in os.listdir():\n if ((n.startswith('lcd') and n.endswith('.py')) or n.startswith('p_')) and n not in " +
+    JSON.stringify(keep) + ":\n  os.remove(n)\n  print('removed', n)");
+  if (r.err) throw new Error(r.err);
+  S.libsOk = {}; S.picsSent = {};
+  const removed = (r.out.match(/removed /g) || []).length;
+  if (removed) log(`Made room on the micro:bit by removing ${removed} file${removed > 1 ? 's' : ''} this program doesn't use.`);
+}
+/* Runs a step that writes files; if the micro:bit is full, frees space once and tries again. */
+async function withSpace(step){
+  try { return await step(); }
+  catch(e) {
+    if (!/ENOSPC/.test(String(e && e.message || e))) throw e;
+    await enterRaw();
+    await freeSpace();
+    try { return await step(); }
+    catch(e2) {
+      if (!/ENOSPC/.test(String(e2 && e2.message || e2))) throw e2;
+      const err = new Error('The micro:bit\'s storage is full. Use fewer or smaller pictures in this program, then click Run again.');
+      err.storageFull = true;
+      throw err;
+    }
+  }
+}
+async function ensureLcd(){
+  const need = libsNeeded(program());
+  S.libsOk = S.libsOk || {};
+  const todo = need.filter(n => !S.libsOk[n]);
+  if (!todo.length) return;
+  const r = await execRaw("import os\nfor n in os.listdir():\n if n.startswith('lcd') and n.endswith('.py'):\n  try:\n   f=open(n)\n   print(n[:-3] + '|' + f.readline().strip())\n   f.close()\n  except Exception:\n   pass");
+  const have = {};
+  r.out.split('\n').forEach(line => { const i = line.indexOf('|'); if (i > 0) have[line.slice(0, i).trim()] = line.slice(i + 1).trim(); });
+  const missing = todo.filter(n => have[n] !== libTag(n));
+  if (missing.length) {
+    setStatus('busy', 'Installing screen library…');
+    log('Installing the colour screen library on the micro:bit. This takes a few seconds and only happens once.');
+    for (const n of missing) await withSpace(() => uploadFile(n + '.py', LCD_LIBS[n]));
+    await softReset();
+    log('Colour screen library installed.', 'ok');
+  }
+  todo.forEach(n => S.libsOk[n] = true);
+}
+async function connect(){
+  if (S.port) { await disconnect(); return; }
+  if (!hasSerial) { showTab('p-log'); log('This browser can\'t connect to the micro:bit. Open the app in Chrome or Edge on a computer.', 'err'); return; }
+  let port;
+  try { port = await navigator.serial.requestPort(); }
+  catch(e) {
+    if (e.name === 'SecurityError') notice('The browser blocks USB connections in this view. Open the app file directly in Chrome or Edge.');
+    return;
+  }
+  try { await port.open({baudRate:115200}); }
+  catch(e) { log('Couldn\'t open the micro:bit. Another tab may be using it, like python.microbit.org or MakeCode. Close that tab and try again.', 'err', String(e)); return; }
+  S.port = port; S.writer = port.writable.getWriter(); readLoop();
+  $('btnConnect').querySelector('span').textContent = 'Disconnect';
+  setStatus('busy', 'Connecting…');
+  try {
+    await enterRaw();
+    await ensureLibrary();
+    setStatus('on', 'Connected');
+    log('micro:bit connected. Click Run!', 'ok');
+  } catch(e) {
+    setStatus('on', 'Connected, no MicroPython');
+    log('The micro:bit is connected but not answering in MicroPython. It probably still has a MakeCode program: click "First-time setup".', 'err', String(e && e.message || e));
+  }
+}
+async function disconnect(){
+  const p = S.port; S.port = null; S.stream = null; S.ready = false; S.libsOk = {}; S.picsSent = {};
+  try { await S.reader?.cancel(); } catch(e) {}
+  try { S.writer?.releaseLock(); } catch(e) {}
+  try { await p?.close(); } catch(e) {}
+  setStatus('off', 'Not connected'); $('btnConnect').querySelector('span').textContent = 'Connect micro:bit';
+}
+navigator.serial?.addEventListener?.('disconnect', e => { if (e.target === S.port) lost(); });
+
+async function needBoard(){
+  if (!S.port) await connect();
+  if (!S.port) return false;
+  if (S.ready) return true;
+  /* Connected earlier but MicroPython didn't answer: try once more before giving up. */
+  try { setStatus('busy', 'Checking…'); await enterRaw(); await ensureLibrary(); setStatus('on', 'Connected'); return true; }
+  catch(e) { noAnswerHelp(e); return false; }
+}
+function finishRun(err){
+  if (err && err.trim()) { const [m, k] = friendly(err); log(m, k, k === 'err' ? err.trim() : ''); }
+  else log('The program finished.', 'ok');
+  setStatus('on', 'Connected');
+}
+async function run(){
+  if (S.busy) return;
+  showTab('p-log');
+  if (!(await needBoard())) return;
+  S.busy = true;
+  try {
+    await enterRaw();
+    await ensureLcd();
+    await withSpace(ensurePictures);
+    S.rx = ''; await sendChunks(program());
+    setStatus('run', 'Running on micro:bit');
+    log('Your program is running on the micro:bit.', 'info');
+    S.stream = {phase:'ok', buf:'', err:''};  /* listen before the run starts, so a fast answer isn't missed */
+    await write('\x04');
+  } catch(e) {
+    if (e && e.noAnswer) noAnswerHelp(e);
+    else if (e && e.storageFull) { log(e.message, 'err'); setStatus('on', 'Connected'); }
+    else { log('Couldn\'t send the program. Click Stop and try again.', 'err', String(e && e.message || e)); setStatus('on', 'Connected'); }
+  }
+  S.busy = false;
+}
+async function stop(){
+  if (!S.port) return;
+  await write('\x03\x03');
+  if (!S.stream) { setStatus('on', 'Connected'); log('Stopped.', 'info'); }
+}
+async function saveToBoard(){
+  if (S.busy) return;
+  showTab('p-log');
+  if (!(await needBoard())) return;
+  S.busy = true;
+  try {
+    setStatus('busy', 'Saving to micro:bit…');
+    await enterRaw();
+    await ensureLcd();
+    await withSpace(ensurePictures);
+    await withSpace(() => uploadFile('main.py', program()));
+    await write('\x02'); await sleep(150);
+    S.rx = ''; S.passthrough = true;
+    await write('\x04');
+    setStatus('run', 'Running on micro:bit');
+    log('Saved! Your program is running now and will run every time the micro:bit turns on.', 'ok');
+  } catch(e) {
+    if (e && e.noAnswer) noAnswerHelp(e);
+    else if (e && e.storageFull) { log(e.message, 'err'); setStatus('on', 'Connected'); }
+    else { log('Saving failed. Click Stop and try again.', 'err', String(e && e.message || e)); setStatus('on', 'Connected'); }
+  }
+  S.busy = false;
+}
+
+/* ---------- project files ---------- */
+$('btnExport').onclick = () => {
+  const data = JSON.stringify({workspace: Blockly.serialization.workspaces.save(ws), pictures: PICS});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([data], {type:'application/json'}));
+  a.download = 'my-microbit-project.json'; a.click();
+};
+$('btnSaveFile').onclick = () => { $('btnExport').click(); log('Saved the project in your Downloads folder. Use "Open" to load it again.', 'ok'); showTab('p-log'); };
+$('btnPy').onclick = () => {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([program()], {type:'text/x-python'}));
+  a.download = 'main.py'; a.click();
+  log('Saved the Python code as main.py in your Downloads folder.', 'ok');
+};
+$('btnCopy').onclick = async () => {
+  try { await navigator.clipboard.writeText(program()); log('Code copied. Paste it with Ctrl+V.', 'ok'); }
+  catch(e) {
+    const r = document.createRange(); r.selectNodeContents($('code'));
+    const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+    log('The code is selected. Press Ctrl+C to copy it.', 'info');
+  }
+};
+$('importFile').onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  try {
+    const obj = JSON.parse(await f.text());
+    if (obj.pictures) { obj.pictures.forEach(p => { if (!PICS.some(q => q.name === p.name)) PICS.push(p); }); savePics(); renderPicList(); }
+    ws.clear(); Blockly.serialization.workspaces.load(obj.workspace || obj, ws); log('Project opened.', 'ok');
+  }
+  catch(err) { log('Couldn\'t open that file. Choose a project file saved from this app.', 'err'); }
+  e.target.value = '';
+};
+let newArmed = false;
+$('btnNew').onclick = () => {
+  if (!newArmed) { newArmed = true; $('btnNew').textContent = 'Sure? Click again'; setTimeout(() => { newArmed = false; $('btnNew').textContent = 'Start over'; }, 3000); return; }
+  newArmed = false; $('btnNew').textContent = 'Start over'; ws.clear();
+};
+
+/* ---------- wire up ---------- */
+$('btnConnect').onclick = connect;
+$('btnRun').onclick = run;
+$('btnStop').onclick = stop;
+$('btnSave').onclick = saveToBoard;
+$('btnFlash').onclick = () => { $('flashSheet').hidden = false; };
+$('btnCloseFlash').onclick = () => { $('flashSheet').hidden = true; };
+log('Welcome! Drag blocks from the menu, connect the micro:bit and click Run. With a new micro:bit, click "First-time setup" first.');
+}
+</script>
