@@ -115,6 +115,16 @@ input[type=file]{font:inherit;max-width:100%}
   #blocklyDiv{height:62vh}
   .drawer{height:340px}
 }
+/* Block categories look like Scratch: a coloured circle with the name under it. */
+#blocklyDiv .blocklyToolboxDiv{padding:4px 0!important;overflow-y:auto!important}
+#blocklyDiv .blocklyToolboxCategory{margin:0}
+#blocklyDiv .blocklyTreeRow{height:auto!important;line-height:1.15!important;width:74px;box-sizing:border-box;padding:6px 3px!important;margin:0!important;border:0!important;border-radius:0;white-space:normal!important;text-align:center;cursor:pointer}
+#blocklyDiv .blocklyTreeRowContentContainer{display:flex;flex-direction:column;align-items:center;gap:4px}
+#blocklyDiv .catDot{width:20px;height:20px;border-radius:50%;background:var(--cat,#888);border:1px solid color-mix(in srgb,var(--cat,#888) 72%,#000);box-sizing:border-box;flex:none}
+#blocklyDiv .blocklyTreeLabel{font:400 11.5px/1.15 var(--f-ui)!important;color:var(--muted)!important;white-space:normal;overflow-wrap:break-word;padding:0!important}
+#blocklyDiv .blocklyTreeRow:hover{background:color-mix(in srgb,var(--ink) 6%,transparent)!important}
+#blocklyDiv .blocklyTreeRow.blocklyTreeSelected{background:color-mix(in srgb,var(--k-blue) 16%,transparent)!important}
+#blocklyDiv .blocklyTreeSelected .blocklyTreeLabel{color:var(--ink)!important;font-weight:500!important}
 /* Picture menus (icons, shapes) open as a grid instead of a long list. */
 .blocklyDropDownDiv .blocklyMenu:has(img){display:grid!important;grid-template-columns:repeat(6,auto);gap:4px;padding:6px!important;max-height:min(70vh,420px)!important;overflow-y:auto}
 .blocklyDropDownDiv .blocklyMenu:has(img) .blocklyMenuItem{padding:4px!important;margin:0!important;min-width:0!important;border-radius:8px;display:flex;justify-content:center}
@@ -422,7 +432,8 @@ function shapeIcon(name){
 }
 
 /* ---------- blocks ---------- */
-const C_SCR = '#0F7B6C', C_COLOR = '#C2410C', C_LED = '#4338CA', C_INPUT = '#7C3AED', C_MUSIC = '#C2410C', C_RADIO = '#0E7490', C_PINS = '#475569', C_TIME = '#B45309';
+/* Block colours follow Scratch: LEDs motion blue, colour screen pen green, colours looks purple, sensing, sound, events, control, my-blocks pink. */
+const C_SCR = '#0FBD8C', C_COLOR = '#9966FF', C_LED = '#4C97FF', C_INPUT = '#5CB1D6', C_MUSIC = '#CF63CF', C_RADIO = '#FFBF00', C_PINS = '#FF6680', C_TIME = '#FFAB19';
 const num = n => ({shadow:{type:'math_number', fields:{NUM:n}}});
 const col = c => ({shadow:{type:'scr_color', fields:{C:c}}});
 const txt = t => ({shadow:{type:'text', fields:{TEXT:t}}});
@@ -548,7 +559,7 @@ defineBlocksT([
   {type:'time_wait', message0:'wait %1 seconds', args0:[{type:'input_value', name:'S', check:'Number'}],
     inputsInline:true, previousStatement:null, nextStatement:null, colour:C_TIME, tooltip:'Pauses before the next block'},
   {type:'loop_forever', message0:'repeat forever', message1:'%1', args1:[{type:'input_statement', name:'DO'}],
-    previousStatement:null, colour:'#5B80A5', tooltip:'The blocks inside run again and again until you click Stop'},
+    previousStatement:null, colour:C_TIME, tooltip:'The blocks inside run again and again until you click Stop'},
 ]);
 
 /* ---------- python ---------- */
@@ -793,7 +804,7 @@ const toolbox = {kind:'categoryToolbox', contents:[
     {kind:'block', type:'mb_pin_read'},
     {kind:'block', type:'mb_pin_analog'},
     {kind:'block', type:'mb_pin_touch'}]},
-  {kind:'category', name:'Time & loops', colour:'#5B80A5', contents:[
+  {kind:'category', name:'Time & loops', colour:C_TIME, contents:[
     {kind:'block', type:'time_wait', inputs:{S:num(1)}},
     {kind:'block', type:'loop_forever'},
     {kind:'block', type:'controls_repeat_ext', inputs:{TIMES:num(10)}},
@@ -880,12 +891,32 @@ const EXAMPLES = {
 const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const theme = Blockly.Theme.defineTheme('workbench', {
   base: Blockly.Themes.Classic,
+  blockStyles: {
+    logic_blocks: {colourPrimary:'#59C059', colourSecondary:'#46B946', colourTertiary:'#389438'},
+    math_blocks: {colourPrimary:'#5C6BC0', colourSecondary:'#4E5BAD', colourTertiary:'#3F4A99'},
+    text_blocks: {colourPrimary:'#00897B', colourSecondary:'#007A6E', colourTertiary:'#00695F'},
+    loop_blocks: {colourPrimary:'#FFAB19', colourSecondary:'#EC9C13', colourTertiary:'#CF8B17'},
+    variable_blocks: {colourPrimary:'#FF8C1A', colourSecondary:'#FF8000', colourTertiary:'#DB6E00'},
+    variable_dynamic_blocks: {colourPrimary:'#FF8C1A', colourSecondary:'#FF8000', colourTertiary:'#DB6E00'},
+    list_blocks: {colourPrimary:'#FF661A', colourSecondary:'#FF5500', colourTertiary:'#E64D00'},
+    procedure_blocks: {colourPrimary:'#FF6680', colourSecondary:'#FF4D6A', colourTertiary:'#FF3355'},
+  },
+  categoryStyles: {
+    logic_category: {colour:'#59C059'}, math_category: {colour:'#5C6BC0'}, text_category: {colour:'#00897B'},
+    loop_category: {colour:'#FFAB19'}, variable_category: {colour:'#FF8C1A'}, list_category: {colour:'#FF661A'}, procedure_category: {colour:'#FF6680'},
+  },
   componentStyles: {
     workspaceBackgroundColour: css('--surface'), toolboxBackgroundColour: css('--sunk'),
     toolboxForegroundColour: css('--ink'), flyoutBackgroundColour: css('--sunk'),
     flyoutForegroundColour: css('--ink'), scrollbarColour: css('--line'), insertionMarkerColour: css('--ink')},
   fontStyle: {family: 'Rubik, Noto Sans Arabic, Segoe UI, Arial, sans-serif', weight: '500', size: 12},
 });
+class RoundCategory extends Blockly.ToolboxCategory {
+  addColourBorder_(colour){ this.rowDiv_.style.setProperty('--cat', colour); }
+  createIconDom_(){ const s = document.createElement('span'); s.className = 'catDot'; s.setAttribute('aria-hidden', 'true'); return s; }
+  setSelected(on){ super.setSelected(on); this.rowDiv_.style.backgroundColor = ''; }
+}
+Blockly.registry.register(Blockly.registry.Type.TOOLBOX_ITEM, Blockly.ToolboxCategory.registrationName, RoundCategory, true);
 const ws = Blockly.inject('blocklyDiv', {
   toolbox: trToolbox(toolbox), rtl: RTL, renderer: 'zelos', theme, trashcan: false, sounds: false,
   zoom: {controls: false, wheel: true, startScale: 0.8, maxScale: 2, minScale: 0.4},
