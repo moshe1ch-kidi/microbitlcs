@@ -130,15 +130,15 @@ input[type=file]{font:inherit;max-width:100%}
 #blocklyDiv .blocklyTreeSelected .blocklyTreeLabel{color:var(--ink)!important;font-weight:500!important}
 /* Zoom buttons in the corner of the workspace, like Scratch. */
 #blocklyDiv{position:relative}
-.zoom{position:absolute;bottom:22px;inset-inline-end:24px;display:flex;flex-direction:column;gap:8px;z-index:20}
+.zoom{position:absolute;bottom:22px;inset-inline-end:24px;display:flex;flex-direction:column;align-items:center;gap:8px;z-index:85}
 .zoom button{width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--muted);display:grid;place-items:center;padding:0;box-shadow:0 1px 3px color-mix(in srgb,var(--ink) 12%,transparent);transition:transform .08s,border-color .15s,color .15s}
 .zoom button:hover{border-color:var(--k-blue);color:var(--k-blue)}
 .zoom button:active{transform:scale(.92)}
 .zoom button:focus-visible{outline:2px solid var(--k-blue);outline-offset:2px}
 .zoom svg{width:20px;height:20px}
 .zoom .gap{height:6px}
-.trash{width:44px;height:44px;margin:0 -4px 6px;border-radius:50%;display:grid;place-items:center;color:var(--muted);background:var(--surface);border:1px solid var(--line);box-shadow:0 1px 3px color-mix(in srgb,var(--ink) 12%,transparent);transition:transform .12s,background .12s,color .12s,border-color .12s}
-.trash svg{width:24px;height:24px;overflow:visible}
+.trash{width:56px;height:56px;margin:0 -10px 8px;border-radius:50%;display:grid;place-items:center;color:var(--muted);background:var(--surface);border:1px solid var(--line);box-shadow:0 1px 3px color-mix(in srgb,var(--ink) 12%,transparent);transition:transform .12s,background .12s,color .12s,border-color .12s}
+.trash svg{width:30px;height:30px;overflow:visible}
 .trash .lid{transition:transform .15s;transform-origin:19px 6px}
 .trash.over{transform:scale(1.18);color:#fff;background:var(--k-stop);border-color:var(--k-stop-d)}
 .trash.over .lid{transform:rotate(25deg) translateY(-1px)}
@@ -1052,7 +1052,19 @@ const ws = Blockly.inject('blocklyDiv', {
     onDragExit(){ bin.classList.remove('over'); }
     onDrop(){ bin.classList.remove('over'); bin.classList.remove('gulp'); void bin.offsetWidth; bin.classList.add('gulp'); }
   }
-  ws.getComponentManager().addComponent({component: new BinArea(), weight: 1,
+  const binArea = new BinArea();
+  /* A big stack is held by its top block, so the pointer may be far from the bin while the stack already covers it.
+     Count it as "in the bin" when the dragged stack covers the middle of the bin. */
+  const findTarget = ws.getDragTarget.bind(ws);
+  ws.getDragTarget = e => {
+    const t = findTarget(e); if (t) return t;
+    const sel = Blockly.getSelected && Blockly.getSelected();
+    if (!sel || !sel.getSvgRoot) return null;
+    const r = sel.getSvgRoot().getBoundingClientRect(), b = bin.getBoundingClientRect();
+    const cx = (b.left + b.right) / 2, cy = (b.top + b.bottom) / 2;
+    return (cx >= r.left && cx <= r.right && cy >= r.top && cy <= r.bottom) ? binArea : null;
+  };
+  ws.getComponentManager().addComponent({component: binArea, weight: 1,
     capabilities: [Blockly.ComponentManager.Capability.DELETE_AREA, Blockly.ComponentManager.Capability.DRAG_TARGET]});
   const mk = (label, svg, fn) => { const b = document.createElement('button'); b.type = 'button';
     b.title = T(label); b.setAttribute('aria-label', T(label)); b.innerHTML = svg; b.onclick = fn; box.appendChild(b); };
