@@ -1300,7 +1300,8 @@ function noStartHelp(){ log('Nothing to run yet. Put your blocks under a "when â
 function addStart(){ const b = Blockly.serialization.blocks.append({type:'when_start', x:40, y:40}, ws); ws.scrollCenter(); return b; }
 let tLoose;
 function markLoose(){
-  ws.getTopBlocks(false).forEach(b => { const root = b.getSvgRoot(); if (root) root.classList.toggle('loose', b.type !== 'when_start'); });
+  /* check every block: a block that was loose and is now snapped under a flag must lose the faded look */
+  ws.getAllBlocks(false).forEach(b => { const root = b.getSvgRoot(); if (root) root.classList.toggle('loose', !b.getParent() && b.type !== 'when_start'); });
 }
 ws.addChangeListener(e => { if (e.isUiEvent && e.type !== Blockly.Events.BLOCK_DRAG) return; clearTimeout(tLoose); tLoose = setTimeout(markLoose, 30); });
 function clearLog(){ $('log').innerHTML = ''; outEl = null; }
