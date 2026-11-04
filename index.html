@@ -1983,6 +1983,15 @@ function waitForRaw(ms){
   err.noAnswer = true;
   throw err;
 }
+async function hardReset(){
+  /* a full restart of the micro:bit (like pressing its reset button), then back to raw mode */
+  setStatus('busy', 'Restarting the micro:bit…');
+  S.rx = '';
+  await sendChunks('import machine\nmachine.reset()\n'); await write('\x04');
+  await sleep(2500);
+  S.micDirty = false;
+  await enterRaw();
+}
 async function softReset(){
   /* Restart MicroPython so a library that was just installed or updated is loaded fresh,
      not the old copy still sitting in memory. Then come back to raw mode. */
@@ -2211,7 +2220,14 @@ async function run(){
       await withSpace(ensurePictures);
       await withSpace(ensureAnimals);
     }
-    S.rx = ''; await sendChunks(S.override || program());
+    let _code = S.override || program();
+    if (S.micDirty && /microphone\./.test(_code)) await hardReset();
+    if (libsNeeded(_code).length) {
+      S.micDirty = true;
+      /* wake the microphone before the screen starts (same line, so error line numbers don't move) */
+      if (/microphone\./.test(_code)) _code = _code.replace('from microbit import *\n', 'from microbit import *;microphone.sound_level()\n');
+    }
+    S.rx = ''; await sendChunks(_code);
     setStatus('run', 'Running on micro:bit');
     log('Your program is running on the micro:bit.', 'info');
     S.stream = {phase:'ok', buf:'', err:''};  /* listen before the run starts, so a fast answer isn't missed */
