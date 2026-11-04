@@ -1496,7 +1496,7 @@ EXAMPLES['Spinning arrow'] = wrap(
 
 /* ---------- gauge: "show [sensor]" — the range and the name come from the sensor ---------- */
 const GAUGE_SENSORS = {
-  sound:   {label:'sound level',     code:'microphone.sound_level()',  lo:0,     hi:255,  title:'Sound'},
+  sound:   {label:'sound level',     code:'microphone.sound_level()',  lo:0,     hi:120,  title:'Sound'},  /* talking is about 30 to 80 */
   light:   {label:'light level',     code:'display.read_light_level()', lo:0,    hi:255,  title:'Light'},
   temp:    {label:'temperature °C',  code:'temperature()',             lo:0,     hi:40,   title:'Temp'},
   compass: {label:'compass heading', code:'compass.heading()',         lo:0,     hi:359,  title:'Compass'},
@@ -2428,7 +2428,8 @@ $('btnConnect').onclick = connect;
   /* the program that reads the sensors */
   /* the program that reads the sensors: it reads every 20 ms and sends the average of each time span,
      so the numbers stay steady (on/off sensors send 1 if they were on at any moment) */
-  const ONOFF_MB = [6, 7, 8], ONOFF_RS = ['button', 'pir', 'far', 'hall'];
+  /* on/off sensors and the sound level keep the highest value of the time span: a clap is short and an average hides it */
+  const ONOFF_MB = [2, 6, 7, 8], ONOFF_RS = ['button', 'pir', 'far', 'hall'];
   function code(){
     const needs = new Set();
     const list = mode === 'mb'
