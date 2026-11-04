@@ -984,7 +984,7 @@ defineBlocksT([
     nextStatement:null, style:'event_blocks',
     tooltip:'The blocks under this start when you click Run. Use two or more to do things at the same time.'},
 ]);
-P.addReservedWords('_run');
+P.addReservedWords('_run,_scrollg');
 /* Only stacks under "when ▶ clicked" make code; loose blocks are drafts and are left out. */
 (function(){
   const btc = P.blockToCode.bind(P);
@@ -1040,8 +1040,25 @@ P.forBlock['when_start'] = (b, g) => {
   const scroll = P.forBlock['mb_scroll'];
   if (scroll) P.forBlock['mb_scroll'] = (b, g) => {
     if (!inScript(b)) return scroll(b, g);
-    const s = g.nameDB_.getDistinctName('s', Blockly.Names.NameType.VARIABLE);
-    return `${s} = str(${v(b,'TEXT',"''")})\ndisplay.scroll(${s}, wait=False)\nyield (len(${s}) * 6 + 5) * 150\n`;
+    /* the text is moved column by column here, not by display.scroll(wait=False): stopping the program while
+       the micro:bit scrolls in the background can crash it ("FATAL: uncaught NLR") */
+    g.definitions_['%scrollg'] = `def _scrollg(s):
+  cols = []
+  for ch in ' ' + str(s) + ' ':
+    try:
+      im = Image(ch)
+    except Exception:
+      im = Image('?')
+    for x in range(5):
+      cols.append([im.get_pixel(x, y) for y in range(5)])
+    cols.append([0] * 5)
+  for k in range(len(cols) - 4):
+    for x in range(5):
+      c = cols[k + x]
+      for y in range(5):
+        display.set_pixel(x, y, c[y])
+    yield 150`;
+    return `yield from _scrollg(${v(b,'TEXT',"''")})\n`;
   };
 })();
 
