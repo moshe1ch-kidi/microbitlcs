@@ -1362,6 +1362,9 @@ def _fx(e, i, d):
   elif e in ('shl', 'shr', 'shu', 'shd'):
     dx, dy = {'shl': (-1, 0), 'shr': (1, 0), 'shu': (0, -1), 'shd': (0, 1)}[e]
     display.show(_fxmap(i, lambda x, y: ((x + dx) % 5, (y + dy) % 5)))
+  if e in ('rotr', 'rotl', 'mirh', 'mirv', 'shl', 'shr', 'shu', 'shd'):
+    # a short pause, so the change can be seen even in a fast loop
+    yield d * 2
   elif e == 'spin':
     path = [(x, 0) for x in range(5)] + [(4, y) for y in range(1, 5)] + [(x, 4) for x in range(3, -1, -1)] + [(0, y) for y in range(3, 0, -1)]
     for k in range(len(path) + 3):
@@ -1441,7 +1444,7 @@ EXAMPLES['Magic dice'] = wrap(
 EXAMPLES['Spinning arrow'] = wrap(
   S_('mb_icon', '<field name="ICON">ARROW_N</field>',
     nxt(S_('loop_forever', `<statement name="DO">${
-      ifDo('<block type="mb_button"><field name="BTN">a</field></block>', fxB('rotr', 'NOW')) + '</block>'}</statement>`))));
+      ifDo('<block type="mb_button_was"><field name="BTN">a</field></block>', fxB('rotr', 'NOW')) + '</block>'}</statement>`))));
 /* ---------- workspace ---------- */
 const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 let themeCount = 0;
