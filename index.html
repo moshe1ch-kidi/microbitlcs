@@ -2030,7 +2030,7 @@ function onText(t){
   if (!S.stream) { S.rx += t; if (S.rx.length > 40000) S.rx = S.rx.slice(-20000); if (S.passthrough) out(t.replace(/\r/g,'')); return; }
   for (const ch of t) {
     const st = S.stream; if (!st) { S.rx += ch; continue; }
-    if (st.phase === 'ok') { st.buf += ch; if (st.buf.endsWith('OK')) st.phase = 'out'; }
+    if (st.phase === 'ok') { if (ch === '\x04') { st.phase = 'err'; continue; } st.buf += ch; if (st.buf.endsWith('OK') || st.buf === 'K') st.phase = 'out'; }  /* a lost O or K doesn't hide the output */
     else if (st.phase === 'out') { if (ch === '\x04') st.phase = 'err'; else if (ch !== '\r') out(ch); }
     else if (st.phase === 'err') { if (ch === '\x04') { st.phase = 'end'; finishRun(st.err); } else st.err += ch; }
     else if (st.phase === 'end') { if (ch === '>') S.stream = null; }
@@ -2124,11 +2124,29 @@ function noAnswerHelp(e){
 async function execRaw(code, ms=8000){
   S.rx = '';
   await sendChunks(code); await write('\x04');
-  await waitFor('OK', 3000);
-  const o = await waitFor('\x04', ms);
-  const e = await waitFor('\x04', 3000);
-  await waitFor('>', 2000);
-  return {out:o, err:e};
+  /* the micro:bit answers OK, the output, an end mark, any error, an end mark and ">".
+     A letter can get lost on the way, so also accept the answer when part of it is missing:
+     when no more letters come for a moment and the answer already ends with ">", it is done. */
+  const t0 = Date.now(); let seen = 0, quiet = Date.now(), gotOk = false;
+  for (;;) {
+    await sleep(15);
+    if (S.rx.length !== seen) { seen = S.rx.length; quiet = Date.now(); }
+    if (!gotOk) {
+      const k = S.rx.indexOf('OK');
+      if (k >= 0) { S.rx = S.rx.slice(k + 2); seen = S.rx.length; gotOk = true; }
+      else if (/\x04/.test(S.rx)) { S.rx = S.rx.replace(/^[OK]/, ''); seen = S.rx.length; gotOk = true; }
+      else if (Date.now() - t0 > 3000 && !S.rx) throw new Error('timeout "OK"');
+    }
+    const m = /^([\s\S]*?)\x04([\s\S]*?)\x04\s*>/.exec(S.rx);
+    if (m) { S.rx = S.rx.slice(m[0].length); return {out:m[1], err:m[2]}; }
+    if (/>\s*$/.test(S.rx) && Date.now() - quiet > 400 && /\x04/.test(S.rx)) {
+      /* one end mark got lost: the part after the one that came is the error (usually empty) */
+      const t = S.rx.replace(/\s*>\s*$/, ''); S.rx = '';
+      const i = t.indexOf('\x04');
+      return {out:t.slice(0, i), err:t.slice(i + 1)};
+    }
+    if (Date.now() - t0 > ms + 3000) throw new Error('timeout "\u0004"');
+  }
 }
 async function uploadFile(name, content){
   for (let attempt = 0; attempt < 3; attempt++) {
