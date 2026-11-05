@@ -2030,7 +2030,7 @@ function onText(t){
   if (!S.stream) { S.rx += t; if (S.rx.length > 40000) S.rx = S.rx.slice(-20000); if (S.passthrough) out(t.replace(/\r/g,'')); return; }
   for (const ch of t) {
     const st = S.stream; if (!st) { S.rx += ch; continue; }
-    if (st.phase === 'ok') { if (ch === '\x04') { st.phase = 'err'; continue; } st.buf += ch; if (st.buf.endsWith('OK') || st.buf === 'K') st.phase = 'out'; }  /* a lost O or K doesn't hide the output */
+    if (st.phase === 'ok') { if (ch === '\x04') { st.phase = 'err'; continue; } st.buf += ch; if (st.buf.endsWith('OK') || st.buf === 'K') st.phase = 'out'; }
     else if (st.phase === 'out') { if (ch === '\x04') st.phase = 'err'; else if (ch !== '\r') out(ch); }
     else if (st.phase === 'err') { if (ch === '\x04') { st.phase = 'end'; finishRun(st.err); } else st.err += ch; }
     else if (st.phase === 'end') { if (ch === '>') S.stream = null; }
@@ -2128,6 +2128,9 @@ async function execRaw(code, ms=8000){
      A letter can get lost on the way, so also accept the answer when part of it is missing:
      when no more letters come for a moment and the answer already ends with ">", it is done. */
   const t0 = Date.now(); let seen = 0, quiet = Date.now(), gotOk = false;
+  /* for the teacher: what was sent and what came back, when it goes wrong */
+  const shown = s => JSON.stringify(s.length > 120 ? s.slice(0, 120) + '…' : s);
+  const fail = what => new Error('timeout ' + what + ' | sent ' + shown(code) + ' | got ' + shown(S.rx));
   for (;;) {
     await sleep(15);
     if (S.rx.length !== seen) { seen = S.rx.length; quiet = Date.now(); }
@@ -2135,7 +2138,7 @@ async function execRaw(code, ms=8000){
       const k = S.rx.indexOf('OK');
       if (k >= 0) { S.rx = S.rx.slice(k + 2); seen = S.rx.length; gotOk = true; }
       else if (/\x04/.test(S.rx)) { S.rx = S.rx.replace(/^[OK]/, ''); seen = S.rx.length; gotOk = true; }
-      else if (Date.now() - t0 > 3000 && !S.rx) throw new Error('timeout "OK"');
+      else if (Date.now() - t0 > 3000 && !S.rx) throw fail('(no OK)');
     }
     const m = /^([\s\S]*?)\x04([\s\S]*?)\x04\s*>/.exec(S.rx);
     if (m) { S.rx = S.rx.slice(m[0].length); return {out:m[1], err:m[2]}; }
@@ -2145,7 +2148,7 @@ async function execRaw(code, ms=8000){
       const i = t.indexOf('\x04');
       return {out:t.slice(0, i), err:t.slice(i + 1)};
     }
-    if (Date.now() - t0 > ms + 3000) throw new Error('timeout "\u0004"');
+    if (Date.now() - t0 > ms + 3000) throw fail('(no end mark)');
   }
 }
 async function uploadFile(name, content){
@@ -2206,16 +2209,13 @@ const aniFiles = code => [...aniUsed(code).map(n => 'a_' + n + '.bin'), ...emoUs
 async function sendBinary(file, bytes){
   let r = await execRaw(`f=open('${file}','wb')`);
   if (r.err) throw new Error(r.err);
-  for (let i = 0; i < bytes.length; i += 64) {
-    const lit = Array.from(bytes.slice(i, i + 64), b => '\\x' + b.toString(16).padStart(2, '0')).join('');
+  for (let i = 0; i < bytes.length; i += 96) {
+    const lit = Array.from(bytes.slice(i, i + 96), b => '\\x' + b.toString(16).padStart(2, '0')).join('');
     r = await execRaw(`f.write(b'${lit}')`);
     if (r.err) throw new Error(r.err);
   }
   r = await execRaw('f.close()');
   if (r.err) throw new Error(r.err);
-  /* check the whole picture arrived: a short file is sent again */
-  r = await execRaw(`import os\nprint(os.size('${file}'))`);
-  if (parseInt((r.out.match(/\d+/) || ['-1'])[0], 10) !== bytes.length) throw new Error('timeout "size"');
 }
 async function ensureAnimals(){
   S.aniOk = S.aniOk || {};
@@ -2298,27 +2298,6 @@ async function ensureLcd(){
   todo.forEach(n => S.libsOk[n] = true);
 }
 
-/* The micro:bit sometimes misses a few letters while files are being written, and then never answers.
-   When a step gets no answer, get the micro:bit's attention again and do the step again (up to 3 times).
-   The steps only send the files that are still missing, so doing one again is safe. */
-const noReply = e => /^timeout /.test(String(e && e.message || e));
-async function againIfNoReply(step){
-  for (let i = 0; ; i++) {
-    try { return await step(); }
-    catch(e) {
-      if (!noReply(e) || i >= 2) throw e;
-      log('The micro:bit missed part of a file. Sending it again…');
-      await sleep(400);
-      await enterRaw();
-    }
-  }
-}
-{
-  const l = ensureLcd, p = ensurePictures, a = ensureAnimals;
-  ensureLcd = () => againIfNoReply(l);
-  ensurePictures = () => againIfNoReply(p);
-  ensureAnimals = () => againIfNoReply(a);
-}
 async function connect(){
   if (S.port) { await disconnect(); return; }
   if (!hasSerial) { showTab('p-log'); log('This browser can\'t connect to the micro:bit. Open the app in Chrome or Edge on a computer.', 'err'); return; }
@@ -2516,6 +2495,45 @@ let newArmed = false;
   $('btnDelAll').onclick = () => { if (ws.getAllBlocks(false).length) open(); };
 })();
 /*/DELALL*/
+/* ---------- Advanced file: sending files when letters get lost on the way ---------- */
+/* sendBinary again, in smaller pieces, with a size check at the end */
+sendBinary = async function(file, bytes){
+  let r = await execRaw(`f=open('${file}','wb')`);
+  if (r.err) throw new Error(r.err);
+  for (let i = 0; i < bytes.length; i += 64) {
+    const lit = Array.from(bytes.slice(i, i + 64), b => '\\x' + b.toString(16).padStart(2, '0')).join('');
+    r = await execRaw(`f.write(b'${lit}')`);
+    if (r.err) throw new Error(r.err);
+  }
+  r = await execRaw('f.close()');
+  if (r.err) throw new Error(r.err);
+  /* check the whole picture arrived: a short file is sent again */
+  r = await execRaw(`import os\nprint(os.size('${file}'))`);
+  if (parseInt((r.out.match(/\d+/) || ['-1'])[0], 10) !== bytes.length) throw new Error('timeout "size"');
+};
+
+/* The micro:bit sometimes misses a few letters while files are being written, and then never answers.
+   When a step gets no answer, get the micro:bit's attention again and do the step again (up to 3 times).
+   The steps only send the files that are still missing, so doing one again is safe. */
+const noReply = e => /^timeout /.test(String(e && e.message || e));
+async function againIfNoReply(step){
+  for (let i = 0; ; i++) {
+    try { return await step(); }
+    catch(e) {
+      if (!noReply(e) || i >= 2) throw e;
+      log('The micro:bit missed part of a file. Sending it again…');
+      await sleep(400);
+      await enterRaw();
+    }
+  }
+}
+{
+  const l = ensureLcd, p = ensurePictures, a = ensureAnimals;
+  ensureLcd = () => againIfNoReply(l);
+  ensurePictures = () => againIfNoReply(p);
+  ensureAnimals = () => againIfNoReply(a);
+}
+
 $('btnNew').onclick = () => {
   if (!newArmed) { newArmed = true; $('btnNew').textContent = 'Sure? Click again'; setTimeout(() => { newArmed = false; $('btnNew').textContent = 'Start over'; }, 3000); return; }
   newArmed = false; $('btnNew').textContent = 'Start over'; ws.clear(); addStart();
