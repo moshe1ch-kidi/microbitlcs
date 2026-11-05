@@ -2580,21 +2580,53 @@ ensureLcd = async function(){
   S.libsOk = S.libsOk || {};
   const todo = need.filter(n => !S.libsOk[n]);
   if (!todo.length) return;
-  const r = await execRaw("import os\ntry:\n import lcdfw\n for k in lcdfw.T:\n  print('F|' + k + '|' + lcdfw.T[k])\nexcept ImportError:\n pass\nfor n in os.listdir():\n if n.startswith('lcd') and n.endswith('.py'):\n  try:\n   f=open(n)\n   print(n[:-3] + '|' + f.readline().strip() + '|' + str(os.size(n)))\n   f.close()\n  except Exception:\n   pass");
-  const built = {}, have = {};
-  r.out.split('\n').forEach(line => {
-    const p = line.trim().split('|');
-    if (p.length === 3 && p[0] === 'F') built[p[1]] = p[2];
-    else if (p.length === 3) have[p[0]] = p[1] + '|' + p[2];
-  });
-  const inside = n => built[n] === libTag(n);
-  /* file copies of built-in libraries: delete them (they would be loaded instead, and they take room) */
-  const extra = Object.keys(have).filter(inside);
-  if (extra.length) {
-    await execRaw('import os\n' + extra.map(n => `try:\n os.remove('${n}.py')\nexcept OSError:\n pass`).join('\n'));
-    log(`Removed ${extra.length} screen library file(s) that are already built into MicroPython, to make room.`, 'info');
+  /* The micro:bit itself compares the versions and answers with one short line, because on some
+     connections letters get lost on the way back and a long list of versions came back garbled.
+     For each library: B = built into MicroPython, F = a good file copy, X = has to be sent.
+     It also deletes file copies of libraries that are built in (they only take room). */
+  const E = todo.map(n => `(${JSON.stringify(n)},${JSON.stringify(libTag(n))},${new TextEncoder().encode(LCD_LIBS[n]).length})`).join(',');
+  const code = `import os
+try:
+ import lcdfw
+ T=lcdfw.T
+except ImportError:
+ T={}
+d=0
+for n in os.listdir():
+ if n.startswith('lcd') and n.endswith('.py') and T.get(n[:-3]):
+  try:
+   f=open(n)
+   l=f.readline().strip()
+   f.close()
+   if l==T[n[:-3]]:
+    os.remove(n)
+    d+=1
+  except OSError:
+   pass
+r=''
+for n,e,s in (${E},):
+ if T.get(n)==e:
+  r+='B'
+ else:
+  try:
+   f=open(n+'.py')
+   ok=f.readline().strip()==e
+   f.close()
+   r+='F' if ok and os.size(n+'.py')==s else 'X'
+  except OSError:
+   r+='X'
+print('R:'+r+':R:'+str(d)+':'+('Y' if T else 'N'))`;
+  let st = null;
+  for (let i = 0; i < 3 && !st; i++) {
+    const r = await execRaw(code);
+    const m = /R:([BFX]+):R:(\d+):([YN])/.exec(r.out);
+    if (m && m[1].length === todo.length) st = {s:m[1], removed:+m[2], fw:m[3] === 'Y'};
   }
-  const missing = todo.filter(n => !inside(n) && have[n] !== libTag(n) + '|' + new TextEncoder().encode(LCD_LIBS[n]).length);
+  if (!st) st = {s:'X'.repeat(todo.length), removed:0, fw:false};  /* no clear answer: send them */
+  const built = st.fw ? {x:1} : {};
+  const extra = Array(st.removed).fill(0);
+  if (st.removed) log(`Removed ${st.removed} screen library file(s) that are already built into MicroPython, to make room.`, 'info');
+  const missing = todo.filter((n, i) => st.s[i] === 'X');
   if (missing.length) {
     if (Object.keys(built).length && !fwHintShown) {
       fwHintShown = true;
