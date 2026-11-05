@@ -2539,6 +2539,29 @@ async function againIfNoReply(step){
   ensureAnimals = () => againIfNoReply(a);
 }
 
+/* "storage full" even when letters of the message got lost on the way (ENSPC, Errno 2 ...) */
+const isFull = e => /EN?O?SPC|ENOS?PC|ENOSP?C|rrno ?28|Errn?o? ?28/.test(String(e && e.message || e));
+withSpace = async function(step){
+  try { return await step(); }
+  catch(e) {
+    if (!isFull(e)) throw e;
+    await enterRaw();
+    await freeSpace();
+    try { return await step(); }
+    catch(e2) {
+      if (!isFull(e2)) throw e2;
+      /* still full: the program saved on the micro:bit (and its files) makes room too */
+      await enterRaw();
+      await freeSpace(true);
+      try { return await step(); }
+      catch(e3) { if (!isFull(e3)) throw e3; }
+      const err = new Error('The micro:bit\'s storage is full. Use fewer or smaller pictures in this program, then click Run again.');
+      err.storageFull = true;
+      throw err;
+    }
+  }
+};
+
 $('btnNew').onclick = () => {
   if (!newArmed) { newArmed = true; $('btnNew').textContent = 'Sure? Click again'; setTimeout(() => { newArmed = false; $('btnNew').textContent = 'Start over'; }, 3000); return; }
   newArmed = false; $('btnNew').textContent = 'Start over'; ws.clear(); addStart();
