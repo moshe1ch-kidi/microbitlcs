@@ -2007,7 +2007,7 @@ function friendly(err){
   if (/KeyboardInterrupt|Keyb\w*Int|Interrupt|eyb|yboa|board|oardI|ardIn|Intr|nterr|rrupt|terru/.test(err)) return ['The program stopped.', 'info'];
   if (/pin_logo|microphone|set_volume|Sound|audio/.test(err) && /(NameError|AttributeError|ImportError)/.test(err)) return ['This block needs a micro:bit V2 (the one with a gold logo and a speaker).', 'err'];
   if (/set_pixel|index out of bounds|brightness/.test(err) || (/ValueError/.test(err) && /pixel/.test(err))) return ['An LED block got a number that is too big or too small. x and y go from 0 to 4, brightness from 0 to 9.', 'err'];
-  if (/NO_PICTURE/.test(err)) return ['That picture isn\'t on the micro:bit yet. Click Run again to send it.', 'err'];
+  if (/NO_PICTURE|NO_P|O_PIC|PICTU|ICTURE/.test(err)) return ['That picture isn\'t on the micro:bit yet. Click Run again to send it.', 'err'];
   if (/ImportError/.test(err) && /lcd/.test(err)) return ['The colour screen library is missing. Unplug and reconnect the micro:bit, then click Run again.', 'err'];
   if (/ENOSPC/.test(err)) return ['The micro:bit\'s storage is full. Use fewer or smaller pictures, then click Run again.', 'err'];
   if (/NameError/.test(err)) return ['You used a variable before giving it a value.', 'err'];
@@ -2643,6 +2643,31 @@ print('R:'+r+':R:'+str(d)+':'+('Y' if T else 'N'))`;
   /* start fresh so the right copy of each library is loaded */
   if (missing.length || extra.length) await softReset();
   todo.forEach(n => S.libsOk[n] = true);
+};
+
+/* Pictures (backgrounds, emoji, animals): check the micro:bit's files at every Run instead of
+   remembering what was sent, because after "First-time setup" the micro:bit's files are gone while the
+   page still remembered them (the program then stopped with NO_PICTURE). Checking takes one short command. */
+ensureAnimals = async function(){
+  const code = program();
+  const todo = [...aniUsed(code).map(n => ['a_' + n + '.bin', ANIMALS64[n]]), ...emoUsed(code).map(n => ['e_' + n + '.bin', EMOJI64[n]]), ...bgUsed(code).map(n => ['b_' + n + '.bin', BG64[n]])];
+  if (!todo.length) return;
+  /* the micro:bit answers with one short line: for each picture 1 = there and the right size, 0 = send it */
+  const list = todo.map(([file, b64]) => `(${JSON.stringify(file)},${atob(b64).length})`).join(',');
+  const ask = `import os\nr=''\nfor n,s in (${list},):\n try:\n  r+='1' if os.size(n)==s else '0'\n except OSError:\n  r+='0'\nprint('P:'+r+':P')`;
+  let ok = null;
+  for (let i = 0; i < 3 && ok === null; i++) {
+    const r = await execRaw(ask);
+    const m = /P:([01]+):P/.exec(r.out);
+    if (m && m[1].length === todo.length) ok = m[1];
+  }
+  if (ok === null) ok = '0'.repeat(todo.length);  /* no clear answer: send them all */
+  for (let i = 0; i < todo.length; i++) {
+    if (ok[i] === '1') continue;
+    const [file, b64] = todo[i];
+    setStatus('busy', 'Sending picture…');
+    await sendBinary(file, Uint8Array.from(atob(b64), c => c.charCodeAt(0)));
+  }
 };
 
 $('btnNew').onclick = () => {
