@@ -274,16 +274,16 @@ input[type=file]{font:inherit;max-width:100%}
   </div>
 </div>
 
-<script type="text/plain" id="sramlib"># lcd_sram v2 - pictures kept in the screen board's memory chip (23LC1024, 128 KB) instead of the micro:bit's files
+<script type="text/plain" id="sramlib"># lcd_sram v3 - pictures kept in the screen board's memory chip (23LC1024, 128 KB) instead of the micro:bit's files
 # The chip shares the SPI wires with the screen: its select is pin2, the screen's is pin16, so the screen is
 # switched off the wires (pin16 high) while the chip is used. The chip keeps its contents while it has power,
 # also when the micro:bit restarts, and loses them when the power goes off.
 # Layout: 8 bytes "LDS1" + end of data (3 bytes) + count; then 64 entries of 24 bytes
 # (name 16, start 3, length 3, check 2); pictures from byte 2048 on.
-from microbit import spi, pin2, pin13, pin14, pin15, pin16
-# the same wires and speed as the screen library, so this works before or after the screen is set up
-spi.init(baudrate=8000000, bits=8, mode=0, sclk=pin13, mosi=pin15, miso=pin14)
-pin2.write_digital(1)
+from microbit import spi, pin2, pin16
+# The wires are set up by the screen library, once. On the micro:bit V2, setting up SPI a second time
+# after it was set up stops the micro:bit (error 020), so this file never calls spi.init itself.
+import lcd
 _MAX = 64
 _DATA = 2048
 _SIZE = 131072
