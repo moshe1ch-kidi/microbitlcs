@@ -274,7 +274,7 @@ input[type=file]{font:inherit;max-width:100%}
   </div>
 </div>
 
-<script type="text/plain" id="sramlib"># sramld v5 - pictures kept in the screen board's memory chip (23LC1024, 128 KB) instead of the micro:bit's files
+<script type="text/plain" id="sramlib"># sramld v6 - pictures kept in the screen board's memory chip (23LC1024, 128 KB) instead of the micro:bit's files
 # The chip shares the SPI wires with the screen: its select is pin2, the screen's is pin16, so the screen is
 # switched off the wires (pin16 high) while the chip is used. The chip keeps its contents while it has power,
 # also when the micro:bit restarts, and loses them when the power goes off.
@@ -388,14 +388,18 @@ def _b64(t):
             acc &= (1 << n) - 1
     return bytes(out[:j])
 def w(o, d):
-    # write a piece of the picture at its place (bytes, or base64 text); the sum of its bytes comes back,
+    # write a piece of the picture at its place (bytes, or base64 text); a check number comes back,
     # so a piece with lost letters is noticed and sent again
     if isinstance(d, str):
         d = _b64(d)
     _wr(_W[0] + o, d)
+    # each byte counts by its place too, so a piece that lost or moved a byte is noticed even when
+    # its plain sum happens to be the same
     s = 0
+    i = 1
     for x in d:
-        s += x
+        s += i * x
+        i += 1
     return s
 def done():
     # read the whole picture back from the chip, add up its bytes, and put it in the list.
@@ -2952,7 +2956,7 @@ async function sramEnsure(){
        piece that arrived wrong is sent again (up to 5 times) */
     for (let k = 0; k < p.bytes.length; k += 96) {
       const piece = p.bytes.slice(k, k + 96);
-      const want = piece.reduce((a, b) => a + b, 0);
+      const want = piece.reduce((a, b, i) => a + (i + 1) * b, 0);  /* each byte counts by its place, like on the micro:bit */
       const lit = btoa(String.fromCharCode(...piece)).replace(/=+$/, '');
       let ok = false;
       for (let t = 0; t < 5 && !ok; t++) {
