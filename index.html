@@ -2104,7 +2104,7 @@ function waitForRaw(ms){
       return new Promise((res, rej) => {
         const t0 = Date.now();
         (function poll(){
-          const m = /(?:raw ?REP|REPL;|CTRL-?B? to e)[^>]*>/.exec(S.rx);
+          const m = /(?:aw ?R|EPL;|RPL;|PL; ?C|CTRL|TRL-|-B ?to|to ?ex|o ?exit)[^>]*>/.exec(S.rx);
           if (m) { S.rx = S.rx.slice(m.index + m[0].length); res(); }
           else if (Date.now() - t0 > ms) rej(new Error('timeout raw REPL'));
           else setTimeout(poll, 15);
@@ -2696,127 +2696,152 @@ $('btnNew').onclick = () => {
 
 /* ---------- wire up ---------- */
 $('btnConnect').onclick = connect;
-/* ---------- Robot Workshop: sensor monitor ----------
-   A window that shows the micro:bit's own sensors or the robot kit's sensors live, without building a program.
-   Start sends a small reading program to the micro:bit; its lines (@W|row|value) fill the window. */
+/* ---------- Sensors window (new version) ----------
+   Shows the micro:bit's sensors (and in the Robot Workshop the robot kit's sensors) live.
+
+   How the values travel, so a connection that loses letters can't break it:
+   - each value is a small closed packet {index:value:check}, e.g. {2:57:42};
+   - the page takes only whole packets whose check number is right, from anywhere in the text,
+     even when line breaks got lost; broken packets are dropped and never reach the messages;
+   - the micro:bit sends one value at a time, in turn (a lost packet is fixed on the next turn),
+     and on/off sensors and the sound level jump the queue the moment they change, so buttons
+     answer at once;
+   - the reading program keeps its lists and makes no new ones while it runs.
+   Without a program the window runs its own reading program. In the LED Workshop, while a program
+   runs, the reading joins that program as one more script, so the program keeps running. */
 (function(){
   const st = document.createElement('style');
   st.textContent = `
 .k-sense{--c:#5CB1D6;--d:#3A8DB2;--t:#fff}
-#monWin{position:absolute;top:12px;inset-inline-end:24px;z-index:300;width:300px;max-width:calc(100% - 40px);background:var(--surface);color:var(--ink);
+#monWin{position:absolute;top:12px;inset-inline-end:24px;z-index:300;width:310px;max-width:calc(100% - 40px);background:var(--surface);color:var(--ink);
   border:2px solid #9966FF;border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,.2);font:14px var(--f-ui, system-ui)}
 #monWin[hidden]{display:none}
 #monWin .mh{display:flex;align-items:center;gap:6px;padding:6px 8px;background:#9966FF;color:#fff;border-radius:9px 9px 0 0;cursor:move;font-weight:700;user-select:none}
 #monWin .mh span{flex:1}
+#monWin .mh .dot{flex:0 0 auto;width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,.35)}
+#monWin .mh .dot.on{background:#7CFFB2}
 #monWin .mh button{border:0;background:rgba(255,255,255,.25);color:#fff;border-radius:6px;width:24px;height:24px;cursor:pointer;font:700 15px/1 system-ui}
 #monWin .tabs{display:flex;gap:6px;padding:8px 10px 2px}
 #monWin .tabs button{flex:1;border:2px solid var(--line);background:var(--sunk);color:var(--ink);border-radius:999px;padding:5px 8px;font:600 13px var(--f-ui, system-ui);cursor:pointer}
 #monWin .tabs button[aria-pressed="true"]{border-color:#9966FF;background:#9966FF;color:#fff}
 #monWin .mb{padding:6px 10px;max-height:52vh;overflow:auto}
-#monWin .mr{display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px dashed var(--line)}
+#monWin .mr{display:grid;grid-template-columns:1fr auto;align-items:center;gap:2px 6px;padding:5px 0;border-bottom:1px dashed var(--line)}
 #monWin .mr:last-child{border-bottom:0}
-#monWin .mr.off .mv{opacity:.3}
+#monWin .mr .top{display:flex;align-items:center;gap:6px;min-width:0}
+#monWin .mr.off .mv,#monWin .mr.off .bar{opacity:.25}
+#monWin .mr.stale .mv{opacity:.4}
 #monWin .ml input{vertical-align:middle;margin:0;accent-color:#9966FF}
 #monWin label.ml{cursor:pointer}
 #monWin .ml{flex:1;min-width:0;color:var(--muted);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #monWin .mr select{flex:1;min-width:0;font:12px var(--f-ui, system-ui);border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--ink);padding:2px}
 #monWin .mr select.pin{flex:0 0 auto}
 #monWin .mv{min-width:58px;text-align:end;font:700 20px var(--f-code, ui-monospace, monospace);direction:ltr;unicode-bidi:isolate}
+#monWin .bar{grid-column:1 / -1;height:6px;border-radius:3px;background:var(--sunk);overflow:hidden;direction:ltr}
+#monWin .bar i{display:block;height:100%;width:0;background:#9966FF;border-radius:3px;transition:width .12s linear}
 #monWin .rm{border:0;background:none;color:var(--muted);cursor:pointer;font:700 16px/1 system-ui;padding:0 2px}
-#monWin .mf{display:flex;gap:8px;align-items:center;padding:4px 10px 10px}
+#monWin .mf{display:flex;gap:8px;align-items:center;padding:4px 10px 10px;flex-wrap:wrap}
 #monWin .mf .add{border:1px dashed var(--line);background:none;color:var(--ink);border-radius:8px;padding:5px 8px;cursor:pointer;font:600 12px var(--f-ui, system-ui)}
-#monWin .mf .ev{font-size:12px;color:var(--muted);white-space:nowrap}
-#monWin .mf .ev select{font:12px var(--f-ui, system-ui);border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--ink)}
-#monWin .mf{flex-wrap:wrap}
 #monWin .mf .go{margin-inline-start:auto;border:0;border-radius:999px;padding:7px 16px;font:700 13px var(--f-ui, system-ui);cursor:pointer;color:#fff;background:var(--k-go)}
 #monWin .mf .go.on{background:var(--k-stop)}
 #monWin .hint{padding:0 10px 8px;color:var(--muted);font-size:12px;line-height:1.4}`;
   document.head.appendChild(st);
 
-  /* what can be read */
-  const MB = [['light','display.read_light_level()'],['temperature °C','temperature()'],['sound level','microphone.sound_level()'],
-    ['acceleration x','accelerometer.get_x()'],['acceleration y','accelerometer.get_y()'],['acceleration z','accelerometer.get_z()'],
-    ['button A','int(button_a.is_pressed())'],['button B','int(button_b.is_pressed())'],['logo touched','int(pin_logo.is_touched())']];
-  /* robot kit sensors exist only in the Robot Workshop */
+  /* what can be read: label, code, kind (0 = average, 1 = sent the moment it changes: on/off and sound, 2 = average without zeros),
+     slow (read every 5th round), lowest and highest for the bar (null = learn it from the values) */
+  const MB = [
+    ['light', 'display.read_light_level()', 0, 1, 0, 255],
+    ['temperature °C', 'temperature()', 0, 0, 0, 40],
+    ['sound level', 'microphone.sound_level()', 1, 0, 0, 255],
+    ['acceleration x', 'accelerometer.get_x()', 0, 0, -1024, 1024],
+    ['acceleration y', 'accelerometer.get_y()', 0, 0, -1024, 1024],
+    ['acceleration z', 'accelerometer.get_z()', 0, 0, -1024, 1024],
+    ['button A', 'int(button_a.is_pressed())', 1, 0, 0, 1],
+    ['button B', 'int(button_b.is_pressed())', 1, 0, 0, 1],
+    ['logo touched', 'int(pin_logo.is_touched())', 1, 0, 0, 1]];
   const HAS_ROBOT = typeof RB !== 'undefined';
   const RS = !HAS_ROBOT ? {} : {
-    sonar:   {label:'ultrasonic distance (cm)', pins:SONAR, code:p => `_sonar(${p})`, need:'sonar'},
-    gray:    {label:'grayscale', pins:APINS, code:p => `_sensor('gray', ${p})`, need:'sensor'},
-    light:   {label:'light', pins:APINS, code:p => `_sensor('light', ${p})`, need:'sensor'},
-    flame:   {label:'flame', pins:APINS, code:p => `_sensor('flame', ${p})`, need:'sensor'},
-    gas:     {label:'gas', pins:APINS, code:p => `_sensor('gas', ${p})`, need:'sensor'},
-    soil:    {label:'soil moisture', pins:APINS, code:p => `_sensor('soil', ${p})`, need:'sensor'},
-    pot:     {label:'potentiometer', pins:APINS, code:p => `_sensor('pot', ${p})`, need:'sensor'},
-    hall:    {label:'Hall (magnet)', pins:APINS, code:p => `_sensor('hall', ${p})`, need:'sensor'},
-    button:  {label:'button', pins:WPINS, code:p => `_sensor('button', ${p})`, need:'sensor'},
-    pir:     {label:'motion (PIR)', pins:WPINS, code:p => `_sensor('pir', ${p})`, need:'sensor'},
-    far:     {label:'long-range photoelectric', pins:WPINS, code:p => `_sensor('far', ${p})`, need:'sensor'},
-    joyx:    {label:'joystick x', pins:null, code:() => '_joy(1)', need:'joy'},
-    joyy:    {label:'joystick y', pins:null, code:() => '_joy(2)', need:'joy'},
-    mpos:    {label:'motor position', pins:MOTORS, code:p => `_rget(${p}, 'position')`, need:'motor'},
-    mspeed:  {label:'motor speed', pins:MOTORS, code:p => `_rget(${p}, 'speed')`, need:'motor'},
+    sonar:   {label:'ultrasonic distance (cm)', pins:SONAR, code:p => `_sonar(${p})`, need:'sonar', kind:2, lo:0, hi:200},
+    gray:    {label:'grayscale', pins:APINS, code:p => `_sensor('gray', ${p})`, need:'sensor', kind:0},
+    light:   {label:'light', pins:APINS, code:p => `_sensor('light', ${p})`, need:'sensor', kind:0},
+    flame:   {label:'flame', pins:APINS, code:p => `_sensor('flame', ${p})`, need:'sensor', kind:0},
+    gas:     {label:'gas', pins:APINS, code:p => `_sensor('gas', ${p})`, need:'sensor', kind:0},
+    soil:    {label:'soil moisture', pins:APINS, code:p => `_sensor('soil', ${p})`, need:'sensor', kind:0},
+    pot:     {label:'potentiometer', pins:APINS, code:p => `_sensor('pot', ${p})`, need:'sensor', kind:0},
+    hall:    {label:'Hall (magnet)', pins:APINS, code:p => `_sensor('hall', ${p})`, need:'sensor', kind:1, lo:0, hi:1},
+    button:  {label:'button', pins:WPINS, code:p => `_sensor('button', ${p})`, need:'sensor', kind:1, lo:0, hi:1},
+    pir:     {label:'motion (PIR)', pins:WPINS, code:p => `_sensor('pir', ${p})`, need:'sensor', kind:1, lo:0, hi:1},
+    far:     {label:'long-range photoelectric', pins:WPINS, code:p => `_sensor('far', ${p})`, need:'sensor', kind:1, lo:0, hi:1},
+    joyx:    {label:'joystick x', pins:null, code:() => '_joy(1)', need:'joy', kind:0},
+    joyy:    {label:'joystick y', pins:null, code:() => '_joy(2)', need:'joy', kind:0},
+    mpos:    {label:'motor position', pins:MOTORS, code:p => `_rget(${p}, 'position')`, need:'motor', kind:0},
+    mspeed:  {label:'motor speed', pins:MOTORS, code:p => `_rget(${p}, 'speed')`, need:'motor', kind:0},
   };
   const tr = s => (typeof T === 'function' ? T(s) : s);
-  let mode = HAS_ROBOT ? 'robot' : 'mb', every = 500, rows = [{k:'sonar', p:'pin1,pin14'}, {k:'gray', p:'pin0'}], mbOn = MB.map(() => true);
-  try { const s = JSON.parse(localStorage.getItem('robot-monitor') || 'null'); if (s && s.rows) { rows = s.rows.filter(r => RS[r.k]); mode = HAS_ROBOT ? (s.mode || mode) : 'mb'; every = +s.every || every; if (Array.isArray(s.mbOn) && s.mbOn.length === MB.length) mbOn = s.mbOn.map(Boolean); } } catch(e) {}
-  const keep = () => { try { localStorage.setItem('robot-monitor', JSON.stringify({mode, rows, every, mbOn})); } catch(e) {} };
+  let mode = HAS_ROBOT ? 'robot' : 'mb', rows = [{k:'sonar', p:'pin1,pin14'}, {k:'gray', p:'pin0'}], mbOn = MB.map(() => true);
+  try {
+    const s = JSON.parse(localStorage.getItem('robot-monitor') || 'null');
+    if (s && s.rows) { rows = s.rows.filter(r => RS[r.k]); mode = HAS_ROBOT ? (s.mode || mode) : 'mb'; if (Array.isArray(s.mbOn) && s.mbOn.length === MB.length) mbOn = s.mbOn.map(Boolean); }
+  } catch(e) {}
+  const keep = () => { try { localStorage.setItem('robot-monitor', JSON.stringify({mode, rows, mbOn})); } catch(e) {} };
 
   const win = document.createElement('div');
   win.id = 'monWin'; win.hidden = true;
-  /* the words are translated here: the page translator leaves the block area alone */
   const esc = x => String(x).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]);
-  win.innerHTML = `<div class="mh"><span>${esc(tr('Sensors'))}</span><button type="button" class="mx" aria-label="${esc(tr('Close'))}" title="${esc(tr('Close'))}">×</button></div>
+  win.innerHTML = `<div class="mh"><i class="dot" aria-hidden="true"></i><span>${esc(tr('Sensors'))}</span><button type="button" class="mx" aria-label="${esc(tr('Close'))}" title="${esc(tr('Close'))}">×</button></div>
     <div class="tabs"><button type="button" data-m="mb">micro:bit</button><button type="button" data-m="robot">${esc(tr('Robot'))}</button></div>
     <div class="mb"></div>
     <div class="mf"><button type="button" class="add">${esc(tr('＋ Add a sensor'))}</button>
-      <label class="ev">${esc(tr('Update every'))} <select class="every">${[[250,'0.25'],[500,'0.5'],[1000,'1'],[2000,'2']].map(([ms, t]) => `<option value="${ms}">${t} ${esc(tr('s'))}</option>`).join('')}</select></label>
       <button type="button" class="go">${esc(tr('Start'))}</button></div>
     <div class="hint">${esc(tr('Plug the micro:bit in with the USB cable. Values change live while it reads.'))}</div>`;
   document.getElementById('blocklyDiv').appendChild(win);
-  const body = win.querySelector('.mb'), goBtn = win.querySelector('.go'), addBtn = win.querySelector('.add');
+  const body = win.querySelector('.mb'), goBtn = win.querySelector('.go'), addBtn = win.querySelector('.add'), dot = win.querySelector('.dot');
   if (!HAS_ROBOT) win.querySelector('.tabs').style.display = 'none';
-  const evSel = win.querySelector('.every');
-  evSel.value = String(every);
-  evSel.onchange = () => { every = +evSel.value; changed(); };
-  let running = false, cells = [];
+  let running = false;
+  /* one entry per sensor being read: its row, value cell, bar, range and when it last got a value */
+  let shown = [];
 
   function opt(sel, list, val){
     sel.innerHTML = '';
     list.forEach(([l, v]) => { const o = document.createElement('option'); o.value = v; o.textContent = tr(l); sel.appendChild(o); });
     if (val != null) sel.value = val;
   }
+  function addShown(r, lo, hi){
+    const bar = document.createElement('div'); bar.className = 'bar'; bar.innerHTML = '<i></i>'; r.appendChild(bar);
+    shown.push({row:r, cell:r.querySelector('.mv'), fill:bar.firstChild, lo, hi, learn:lo == null, t:0});
+  }
   function render(){
     win.querySelectorAll('.tabs button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.m === mode)));
     addBtn.hidden = mode !== 'robot';
-    body.innerHTML = ''; cells = [];
+    body.innerHTML = ''; shown = [];
     if (mode === 'mb') {
-      /* only the ticked sensors are read: less work for the micro:bit */
-      MB.forEach(([l], i) => {
+      MB.forEach(([l, , , , lo, hi], i) => {
         const r = document.createElement('div'); r.className = 'mr';
-        r.innerHTML = '<label class="ml"><input type="checkbox"> <span></span></label><span class="mv">–</span>';
+        r.innerHTML = '<div class="top"><label class="ml"><input type="checkbox"> <span></span></label></div><span class="mv">–</span>';
         r.querySelector('.ml span').textContent = tr(l);
         const cb = r.querySelector('input'); cb.checked = mbOn[i];
         cb.onchange = () => { mbOn[i] = cb.checked; changed(); };
-        if (!mbOn[i]) r.classList.add('off'); else cells.push(r.querySelector('.mv'));
+        if (mbOn[i]) addShown(r, lo, hi); else r.classList.add('off');
         body.appendChild(r);
       });
       return;
     }
     rows.forEach((row, i) => {
       const r = document.createElement('div'); r.className = 'mr';
+      const top = document.createElement('div'); top.className = 'top'; r.appendChild(top);
       const k = document.createElement('select'); k.setAttribute('aria-label', tr('Sensor'));
       opt(k, Object.entries(RS).map(([key, d]) => [d.label, key]), row.k);
-      r.appendChild(k);
+      top.appendChild(k);
       const def = RS[row.k];
       let p = null;
       if (def.pins) {
         p = document.createElement('select'); p.className = 'pin'; p.setAttribute('aria-label', tr('Pin'));
         opt(p, def.pins, row.p);
         if (!def.pins.some(x => x[1] === row.p)) { row.p = def.pins[0][1]; p.value = row.p; }
-        r.appendChild(p);
+        top.appendChild(p);
       }
-      const v = document.createElement('span'); v.className = 'mv'; v.textContent = '–'; r.appendChild(v); cells.push(v);
-      const x = document.createElement('button'); x.type = 'button'; x.className = 'rm'; x.textContent = '×'; x.title = tr('Remove'); r.appendChild(x);
+      const x = document.createElement('button'); x.type = 'button'; x.className = 'rm'; x.textContent = '×'; x.title = tr('Remove'); top.appendChild(x);
+      const v = document.createElement('span'); v.className = 'mv'; v.textContent = '–'; r.appendChild(v);
+      addShown(r, def.lo, def.hi);
       k.onchange = () => { row.k = k.value; const d = RS[row.k]; row.p = d.pins ? d.pins[0][1] : null; changed(); };
       if (p) p.onchange = () => { row.p = p.value; changed(); };
       x.onclick = () => { rows.splice(i, 1); changed(); };
@@ -2827,159 +2852,157 @@ $('btnConnect').onclick = connect;
   addBtn.onclick = () => { rows.push({k:'gray', p:'pin0'}); changed(); };
   win.querySelectorAll('.tabs button').forEach(b => b.onclick = () => { mode = b.dataset.m; changed(); });
 
-  /* the program that reads the sensors */
-  /* the program that reads the sensors: it reads every 20 ms and sends the average of each time span,
-     so the numbers stay steady (on/off sensors send 1 if they were on at any moment) */
-  /* on/off sensors and the sound level keep the highest value of the time span: a clap is short and an average hides it */
-  const ONOFF_MB = [2, 6, 7, 8], ONOFF_RS = ['button', 'pir', 'far', 'hall'];
-  function code(){
-    const needs = new Set();
-    const list = mode === 'mb'
-      ? MB.map(([, c], i) => [c, ONOFF_MB.includes(i) ? 1 : 0, i === 0]).filter((x, i) => mbOn[i])
-      : rows.map(r => { needs.add(RS[r.k].need); return [RS[r.k].code(r.p), ONOFF_RS.includes(r.k) ? 1 : r.k === 'sonar' ? 2 : 0]; });
-    const n = list.length;
-    /* the light level is read through the LED screen, so it is read only every 5th round (the screen doesn't flicker) */
-    const reads = list.map(([c, k, slow], i) => slow
-      ? `  if _n % 5 == 0:\n    try:\n      _add(${i}, ${c}, ${k})\n    except Exception:\n      _B[${i}] = 1`
-      : `  try:\n    _add(${i}, ${c}, ${k})\n  except Exception:\n    _B[${i}] = 1`).join('\n');
-    const helpers = [...needs].map(x => RB[x]).join('\n');
-    return 'from microbit import *\n' + helpers + '\n' +
-`_K = ${JSON.stringify(list.map(x => x[1]))}
-_S = [0] * ${n}
-_C = [0] * ${n}
-_B = [0] * ${n}
-def _add(i, v, k):
-  if k == 1:
-    _S[i] = max(_S[i], int(v))
-    _C[i] = 1
-  elif not (k == 2 and v == 0):
-    _S[i] += v
-    _C[i] += 1
-def _send():
-  # one short line per sensor with a check number, every time: a line with lost letters is skipped
-  # and costs just that one value until the next time
-  for i in range(${n}):
-    if _C[i]:
-      v = _S[i] if _K[i] == 1 else round(_S[i] / _C[i])
-    else:
-      v = '?' if _B[i] else 0
-    _S[i] = 0
-    _C[i] = 0
-    _B[i] = 0
-    s = str(i) + ':' + str(v)
-    print('@' + s + ':' + str(sum(map(ord, s)) % 89 + 10))
-_t = running_time() - ${every} + 150  # the first values come quickly
-_n = 0
-while True:
-${reads || '  pass'}
-  _n += 1
-  if running_time() - _t >= ${every}:
-    _t = running_time()
-    _send()
-  sleep(50)  # 20 rounds a second: enough for steady averages, light work for the micro:bit
-`;
+  /* a value arrived: number, bar, and the row is fresh again */
+  function showValue(i, val){
+    const s = shown[i];
+    if (!s) return;
+    s.cell.textContent = val;
+    s.t = Date.now();
+    s.row.classList.remove('stale');
+    const n = parseFloat(val);
+    if (!isNaN(n)) {
+      if (s.learn) { s.lo = s.lo == null ? Math.min(0, n) : Math.min(s.lo, n); s.hi = s.hi == null ? Math.max(1, n) : Math.max(s.hi, n); }
+      const f = s.hi > s.lo ? (Math.max(s.lo, Math.min(s.hi, n)) - s.lo) / (s.hi - s.lo) : 0;
+      s.fill.style.width = Math.round(f * 100) + '%';
+    }
+    dot.classList.toggle('on');
   }
-  /* LED Workshop: while your program runs, the window reads the sensors inside that same program
-     (a small extra script, _mon, joins your scripts), so the program keeps running and the microphone
-     keeps working. Without a running program the window runs its own reading program as before. */
-  const WITH_PROG = !HAS_ROBOT;
-  function monGen(){
-    const list = MB.map(([, c], i) => [c, ONOFF_MB.includes(i) ? 1 : 0, i === 0]).filter((x, i) => mbOn[i]);
-    const n = list.length;
-    const reads = list.map(([c, k, slow], i) => slow
-      ? `    if r % 5 == 0:\n      try:\n        add(${i}, ${c}, ${k})\n      except Exception:\n        B[${i}] = 1`
-      : `    try:\n      add(${i}, ${c}, ${k})\n    except Exception:\n      B[${i}] = 1`).join('\n');
+  /* rows with no new value for 1.5 s turn pale, so children see what is up to date */
+  setInterval(() => {
+    if (!running) return;
+    const now = Date.now();
+    shown.forEach(s => s.row.classList.toggle('stale', now - s.t > 1500));
+  }, 500);
+
+  /* ---- the reading program ---- */
+  function list(){
+    const needs = new Set();
+    const l = mode === 'mb'
+      ? MB.filter((x, i) => mbOn[i]).map(([, c, kind, slow]) => [c, kind, slow])
+      : rows.map(r => { const d = RS[r.k]; needs.add(d.need); return [d.code(r.p), d.kind, 0]; });
+    return {l, helpers:[...needs].map(x => RB[x]).join('\n')};
+  }
+  /* the reading as a script (a generator): reads every sensor each round, sends one value in turn, and
+     on/off values and the sound level as soon as they change (at most 2 a round) */
+  function gen(l){
+    const n = l.length;
+    const reads = l.map(([c, kind, slow], i) => {
+      const add = kind === 1 ? `S[${i}] = v\n      C[${i}] = 1`
+                : kind === 2 ? `if v:\n        S[${i}] += v\n        C[${i}] += 1`
+                : `S[${i}] += v\n      C[${i}] += 1`;
+      const r = `    try:\n      v = ${c}\n      ${add}\n    except Exception:\n      E[${i}] = 1`;
+      return slow ? `    if t % 5 == 1:\n` + r.split('\n').map(x => '  ' + x).join('\n') : r;
+    }).join('\n');
     return `def _mon():
-  K = ${JSON.stringify(list.map(x => x[1]))}
+  K = ${JSON.stringify(l.map(x => x[1]))}
   S = [0] * ${n}
   C = [0] * ${n}
-  B = [0] * ${n}
-  def add(i, v, k):
-    if k == 1:
-      S[i] = max(S[i], int(v))
-      C[i] = 1
-    else:
-      S[i] += v
-      C[i] += 1
-  t = running_time() - ${every} + 150
-  r = 0
+  E = [0] * ${n}
+  L = [-99999] * ${n}
+  def send(i, v):
+    L[i] = v
+    S[i] = 0
+    C[i] = 0
+    E[i] = 0
+    s = str(i) + ':' + str(v)
+    print('{' + s + ':' + str(sum(map(ord, s)) % 89 + 10) + '}')
+  t = 0
+  q = 0
   while True:
+    t += 1
 ${reads || '    pass'}
-    r += 1
-    if running_time() - t >= ${every}:
-      t = running_time()
-      for i in range(${n}):
-        if C[i]:
-          v = S[i] if K[i] == 1 else round(S[i] / C[i])
-        else:
-          v = '?' if B[i] else 0
-        S[i] = 0
-        C[i] = 0
-        B[i] = 0
-        s = str(i) + ':' + str(v)
-        print('@' + s + ':' + str(sum(map(ord, s)) % 89 + 10))
-    yield 50
+    m = 0
+    for i in range(${n}):
+      if m < 2 and K[i] == 1 and C[i] and S[i] != L[i]:
+        send(i, S[i])
+        m += 1
+    if ${n}:
+      i = q
+      q = (q + 1) % ${n}
+      if C[i]:
+        send(i, S[i] if K[i] == 1 else round(S[i] / C[i]))
+      elif E[i]:
+        send(i, '?')
+    yield 40
 `;
   }
-  /* called by Run: when the window is on, your program gets the _mon script too (on its last line, so
-     error line numbers stay the same) */
+  /* on its own: the script above, run in a plain loop */
+  function code(){
+    const {l, helpers} = list();
+    return 'from microbit import *\n' + helpers + '\n' + gen(l) + 'for _w in _mon():\n  sleep(_w)\n';
+  }
+  /* LED Workshop: while your program runs, the reading joins it as one more script (on its last line,
+     so error line numbers stay the same) */
+  const WITH_PROG = !HAS_ROBOT;
   window.monWrap = code => {
     if (!WITH_PROG || !running || S.override) return code;
     const m = /\n(_run\(.*\))[ \t]*\n*$/.exec(code);
-    if (!m) { setStopped(); return code; }  /* a program without scripts: the window stops */
-    return code.slice(0, m.index + 1) + 'exec(' + JSON.stringify(monGen()) + ');' + m[1].slice(0, -1) + ', _mon())\n';
+    if (!m) { setStopped(); return code; }
+    return code.slice(0, m.index + 1) + 'exec(' + JSON.stringify(gen(list().l)) + ');' + m[1].slice(0, -1) + ', _mon())\n';
   };
+  function setRunning(){
+    shown.forEach(s => { s.cell.textContent = '–'; s.fill.style.width = '0'; s.t = Date.now(); s.row.classList.remove('stale'); });
+    running = true; goBtn.textContent = tr('Stop'); goBtn.classList.add('on');
+  }
   async function start(){
     if (WITH_PROG && S.stream && S.userRun) {
-      /* your program is running: run it again with the sensor readings inside it */
-      await stop(); await sleep(400);  /* stopping it puts the button back to Start, so switch on after */
-      cells.forEach(c => c.textContent = '–');
-      running = true; goBtn.textContent = tr('Stop'); goBtn.classList.add('on');
+      /* your program is running: run it again with the reading inside it */
+      await stop(); await sleep(400);
+      setRunning();
       await run();
       if (!S.stream) setStopped();
       return;
     }
     if (S.stream) { await stop(); await sleep(400); }
-    cells.forEach(c => c.textContent = '–');
-    running = true; goBtn.textContent = tr('Stop'); goBtn.classList.add('on');
+    setRunning();
     S.override = code();
     try { await run(); } finally { S.override = null; }
     if (!S.stream) setStopped();
   }
-  function setStopped(){ running = false; goBtn.textContent = tr('Start'); goBtn.classList.remove('on'); }
+  function setStopped(){ if (running) quietUntil = Date.now() + 1500; running = false; goBtn.textContent = tr('Start'); goBtn.classList.remove('on'); }
   goBtn.onclick = async () => { if (running) { await stop(); setStopped(); } else start(); };
   win.querySelector('.mx').onclick = async () => { win.hidden = true; if (running) { await stop(); setStopped(); } };
 
-  /* readings from the reading program go to this window; everything else as before */
-  /* Output from the micro:bit, a line at a time. Value lines carry a check number: a line where letters got lost
-     on the way is skipped (the next one comes soon), and never shows up as text in the messages. */
+  /* ---- what comes back from the micro:bit ---- */
   const check = t => { let n = 0; for (const ch of t) n += ch.charCodeAt(0); return n % 89 + 10; };
-  let line = '';
+  let pend = '', line = '', quietUntil = 0;
+  /* other value lines (calibration @C, the sensor-window block @W) and plain output, a line at a time */
   function takeLine(l){
-    if (running && /^[@\d.?-]*:[@\d:.?-]*$/.test(l) && !/^@\d+:[^:]*:\d+$/.test(l)) return;  /* while the window reads: a sensor line that lost letters */
-    let m = /^@(\d+):([^:]*):(\d+)$/.exec(l);
-    if (m) { if (check(m[1] + ':' + m[2]) === +m[3] && running && cells[+m[1]]) cells[+m[1]].textContent = m[2]; return; }
-    m = /^@M\|(.*)\|(\d+)$/.exec(l);
-    if (m) { if (check(m[1]) === +m[2] && running) m[1].split(',').forEach((v, i) => { if (cells[i]) cells[i].textContent = v; }); return; }
-    m = /^@C\|(.*)\|(\d+)$/.exec(l);
+    let m = /^@C\|(.*)\|(\d+)$/.exec(l);
     if (m) { if (check(m[1]) === +m[2] && window.calLine) window.calLine(m[1].split(',').map(Number)); return; }
     m = /^@W\|([^|]*)\|(.*)\|(\d+)$/.exec(l);
     if (m) { if (check(m[1] + '|' + m[2]) === +m[3]) window.watchShow(m[1], m[2]); return; }
-    if (/@|^W\||M\||W\|r/.test(l)) return;   /* a value line that lost letters */
+    if (/@|^W\||^C\|/.test(l)) return;   /* a value line that lost letters */
+    if (reading() && /:/.test(l) && /^[\d:.?\-\s]*$/.test(l)) return;   /* a packet that lost both of its ends */
     outRaw(l + '\n');
   }
-  window.outHook = text => {
+  function feed(text){
     for (const ch of text) { if (ch === '\n') { takeLine(line); line = ''; } else line += ch; }
-    if (line && !/^[@WM|]/.test(line) && !(running && /^[\d:.?-]+$/.test(line))) { outRaw(line); line = ''; }
+    if (line && !/^[@WC|]/.test(line) && !(reading() && /^[\d:.?\-\s]*$/.test(line))) { outRaw(line); line = ''; }
+  }
+  const reading = () => running || Date.now() < quietUntil;
+  window.outHook = text => {
+    if (!reading()) { feed(pend + text); pend = ''; return; }
+    let t = pend + text;
+    pend = '';
+    /* a packet that has not ended yet waits for the next piece of text */
+    const k = t.lastIndexOf('{');
+    if (k >= 0 && /^\{[\d:.?\-]*$/.test(t.slice(k))) { pend = t.slice(k); t = t.slice(0, k); }
+    /* whole packets with the right check number go to the window */
+    t = t.replace(/\{(\d{1,2}):(-?[\d.]+|\?):(\d{2,3})\}/g, (all, i, v, c) => { if (check(i + ':' + v) === +c) showValue(+i, v); return ''; });
+    /* broken packets (letters lost) are dropped */
+    t = t.replace(/\{[\d:.?\-]*\}?/g, '').replace(/[\d:.?\-]*\}/g, '');
+    feed(t);
   };
-  window.outFlushHook = () => { if (line) { takeLine(line); line = ''; } };
+  window.outFlushHook = () => { pend = ''; if (line) { takeLine(line); line = ''; } };
   const plain = window.watchShow;
   window.watchShow = (k, val) => {
     const m = /^r(\d+)$/.exec(k);
-    if (running && m && cells[+m[1]]) cells[+m[1]].textContent = val;
+    if (running && m && shown[+m[1]]) showValue(+m[1], val);
     else plain(k, val);
   };
-  /* when the reading program ends (Stop, an error, or a new Run) the button goes back to Start */
+  /* when the reading ends (Stop, an error, or a new Run) the button goes back to Start; packets still on
+     their way for a moment after are dropped quietly */
   const fin = finishRun;
   finishRun = err => { setStopped(); fin(err); };
 
