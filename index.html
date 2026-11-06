@@ -2895,15 +2895,28 @@ async function screenCheck(){
   log('Pictures are kept in the memory chip on the screen board (128 KB), not in the micro:bit\'s storage.', 'info');
 }
 const picSum = bytes => { let s = 0; for (const b of bytes) s = (s + b) & 65535; return s; };
+/* Is sramld.py on the micro:bit, and the right version? The micro:bit compares the first line and the size
+   itself and answers with one letter, because a long answer (the whole first line) came back with lost
+   letters, looked "different", and the library was sent again before every Run. Once it is right, it
+   isn't asked again until the next connection. */
+let sramLibOk = false;
 async function ensureSramLib(){
+  if (sramLibOk) return;
   const tag = SRAM_LIB.split('\n')[0].trim(), size = new TextEncoder().encode(SRAM_LIB).length;
-  const r = await execRaw("import os\ntry:\n f=open('sramld.py')\n print('S|' + f.readline().strip() + '|' + str(os.size('sramld.py')) + '|S')\n f.close()\nexcept OSError:\n print('S|none|0|S')");
-  const m = /S\|(.*)\|(\d+)\|S/.exec(r.out);
-  if (m && m[1] === tag && +m[2] === size) return;
-  setStatus('busy', 'Installing screen library…');
-  await withSpace(() => uploadFile('sramld.py', SRAM_LIB));
-  /* forget an older sramld loaded before (no restart needed: it sets nothing up itself) */
-  await execRaw("import sys\nsys.modules.pop('sramld', None)");
+  const ask = `import os\ntry:\n f=open('sramld.py')\n ok = f.readline().strip() == ${JSON.stringify(tag)} and os.size('sramld.py') == ${size}\n f.close()\nexcept OSError:\n ok = False\nprint('S:' + ('1' if ok else '0') + ':S')`;
+  let have = null;
+  for (let i = 0; i < 3 && have === null; i++) {
+    const r = await execRaw(ask);
+    const m = /S:([01]):S/.exec(r.out);
+    if (m) have = m[1] === '1';
+  }
+  if (!have) {
+    setStatus('busy', 'Installing screen library…');
+    await withSpace(() => uploadFile('sramld.py', SRAM_LIB));
+    /* forget an older sramld loaded before (no restart needed: it sets nothing up itself) */
+    await execRaw("import sys\nsys.modules.pop('sramld', None)");
+  }
+  sramLibOk = true;
 }
 async function sramEnsure(){
   const code = program();
@@ -2986,7 +2999,7 @@ window.sramHook = code => {
 /* a new connection may be a different micro:bit or screen: ask the chip again */
 {
   const plainConnect = connect;
-  connect = (...a) => { sramState = null; return plainConnect(...a); };
+  connect = (...a) => { sramState = null; sramLibOk = false; return plainConnect(...a); };
 }
 
 /* "Start fresh" after files change: a full restart of the micro:bit instead of MicroPython's soft restart.
