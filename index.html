@@ -2713,41 +2713,49 @@ $('btnConnect').onclick = connect;
   const st = document.createElement('style');
   st.textContent = `
 .k-sense{--c:#5CB1D6;--d:#3A8DB2;--t:#fff}
-#monWin{position:absolute;top:12px;inset-inline-end:24px;z-index:300;width:310px;max-width:calc(100% - 40px);background:var(--surface);color:var(--ink);
+#monWin{position:absolute;top:12px;inset-inline-end:24px;z-index:300;width:250px;max-width:calc(100% - 40px);background:var(--surface);color:var(--ink);
   border:2px solid #9966FF;border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,.2);font:14px var(--f-ui, system-ui)}
 #monWin[hidden]{display:none}
-#monWin .mh{display:flex;align-items:center;gap:6px;padding:6px 8px;background:#9966FF;color:#fff;border-radius:9px 9px 0 0;cursor:move;font-weight:700;user-select:none}
+#monWin .mh{display:flex;align-items:center;gap:6px;padding:4px 8px;font-size:13px;background:#9966FF;color:#fff;border-radius:9px 9px 0 0;cursor:move;font-weight:700;user-select:none}
 #monWin .mh span{flex:1}
 #monWin .mh .dot{flex:0 0 auto;width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,.35)}
 #monWin .mh .dot.on{background:#7CFFB2}
-#monWin .mh button{border:0;background:rgba(255,255,255,.25);color:#fff;border-radius:6px;width:24px;height:24px;cursor:pointer;font:700 15px/1 system-ui}
-#monWin .tabs{display:flex;gap:6px;padding:8px 10px 2px}
-#monWin .tabs button{flex:1;border:2px solid var(--line);background:var(--sunk);color:var(--ink);border-radius:999px;padding:5px 8px;font:600 13px var(--f-ui, system-ui);cursor:pointer}
+#monWin .mh button{border:0;background:rgba(255,255,255,.25);color:#fff;border-radius:6px;width:22px;height:22px;cursor:pointer;font:700 15px/1 system-ui}
+#monWin .tabs{display:flex;gap:6px;padding:6px 8px 0}
+#monWin .tabs button{flex:1;border:2px solid var(--line);background:var(--sunk);color:var(--ink);border-radius:999px;padding:3px 6px;font:600 12px var(--f-ui, system-ui);cursor:pointer}
 #monWin .tabs button[aria-pressed="true"]{border-color:#9966FF;background:#9966FF;color:#fff}
-#monWin .mb{padding:6px 10px;max-height:52vh;overflow:auto}
-#monWin .mr{display:grid;grid-template-columns:1fr auto;align-items:center;gap:2px 6px;padding:5px 0;border-bottom:1px dashed var(--line)}
+#monWin .mb{padding:2px 8px;max-height:60vh;overflow:auto}
+#monWin .mr{display:grid;grid-template-columns:1fr auto;align-items:center;gap:0 6px;padding:2px 0}
 #monWin .mr:last-child{border-bottom:0}
-#monWin .mr .top{display:flex;align-items:center;gap:6px;min-width:0}
+#monWin .mr .top{display:flex;align-items:center;gap:4px;min-width:0}
+#monWin .ic{flex:0 0 20px;width:20px;height:20px;display:inline-flex}
+#monWin .ic svg{width:20px;height:20px}
+#monWin .ml span:last-child{overflow:hidden;text-overflow:ellipsis}
 #monWin .mr.off .mv,#monWin .mr.off .bar{opacity:.25}
 #monWin .mr.stale .mv{opacity:.4}
 #monWin .ml input{vertical-align:middle;margin:0;accent-color:#9966FF}
 #monWin label.ml{cursor:pointer}
-#monWin .ml{flex:1;min-width:0;color:var(--muted);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#monWin .mr select{flex:1;min-width:0;font:12px var(--f-ui, system-ui);border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--ink);padding:2px}
+#monWin .ml{flex:1;min-width:0;display:flex;align-items:center;gap:4px;color:var(--ink);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#monWin .mr select{flex:1;min-width:0;font:11px var(--f-ui, system-ui);border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--ink);padding:2px}
 #monWin .mr select.pin{flex:0 0 auto}
-#monWin .mv{min-width:58px;text-align:end;font:700 20px var(--f-code, ui-monospace, monospace);direction:ltr;unicode-bidi:isolate}
-#monWin .bar{grid-column:1 / -1;height:6px;border-radius:3px;background:var(--sunk);overflow:hidden;direction:ltr}
+#monWin .mv{min-width:44px;text-align:end;font:700 15px var(--f-code, ui-monospace, monospace);direction:ltr;unicode-bidi:isolate}
+#monWin .bar{grid-column:1 / -1;height:3px;border-radius:3px;background:var(--sunk);overflow:hidden;direction:ltr}
 #monWin .bar i{display:block;height:100%;width:0;background:#9966FF;border-radius:3px;transition:width .12s linear}
 #monWin .rm{border:0;background:none;color:var(--muted);cursor:pointer;font:700 16px/1 system-ui;padding:0 2px}
-#monWin .mf{display:flex;gap:8px;align-items:center;padding:4px 10px 10px;flex-wrap:wrap}
+#monWin .mf{display:flex;gap:6px;align-items:center;padding:4px 8px 6px;flex-wrap:wrap}
 #monWin .mf .add{border:1px dashed var(--line);background:none;color:var(--ink);border-radius:8px;padding:5px 8px;cursor:pointer;font:600 12px var(--f-ui, system-ui)}
-#monWin .mf .go{margin-inline-start:auto;border:0;border-radius:999px;padding:7px 16px;font:700 13px var(--f-ui, system-ui);cursor:pointer;color:#fff;background:var(--k-go)}
+#monWin .mf .go{margin-inline-start:auto;border:0;border-radius:999px;padding:5px 14px;font:700 13px var(--f-ui, system-ui);cursor:pointer;color:#fff;background:var(--k-go)}
 #monWin .mf .go.on{background:var(--k-stop)}
-#monWin .hint{padding:0 10px 8px;color:var(--muted);font-size:12px;line-height:1.4}`;
+#monWin .hint{padding:0 8px 6px;color:var(--muted);font-size:11px;line-height:1.3}
+#monWin.on .hint{display:none}`;
   document.head.appendChild(st);
 
   /* what can be read: label, code, kind (0 = average, 1 = sent the moment it changes: on/off and sound, 2 = average without zeros),
      slow (read every 5th round), lowest and highest for the bar (null = learn it from the values) */
+  /* a small picture next to each sensor's name: the same ones as on the blocks */
+  const ICONS = Object.assign({}, typeof MBICON !== 'undefined' ? MBICON : {}, typeof SICON !== 'undefined' ? SICON : {});
+  const icon = k => ICONS[k] ? `<span class="ic" aria-hidden="true"><svg viewBox="0 0 20 20">${ICONS[k]}</svg></span>` : '';
+  const MB_IC = ['mb_light', 'mb_temp', 'mb_sound_level', 'mb_accel', 'mb_accel', 'mb_accel', 'mb_button', 'mb_button', 'mb_logo'];
   const MB = [
     ['light', 'display.read_light_level()', 0, 1, 0, 255],
     ['temperature °C', 'temperature()', 0, 0, 0, 40],
@@ -2816,8 +2824,8 @@ $('btnConnect').onclick = connect;
     if (mode === 'mb') {
       MB.forEach(([l, , , , lo, hi], i) => {
         const r = document.createElement('div'); r.className = 'mr';
-        r.innerHTML = '<div class="top"><label class="ml"><input type="checkbox"> <span></span></label></div><span class="mv">–</span>';
-        r.querySelector('.ml span').textContent = tr(l);
+        r.innerHTML = `<div class="top"><label class="ml"><input type="checkbox">${icon(MB_IC[i])}<span></span></label></div><span class="mv">–</span>`;
+        r.querySelector('.ml span:last-child').textContent = tr(l);
         const cb = r.querySelector('input'); cb.checked = mbOn[i];
         cb.onchange = () => { mbOn[i] = cb.checked; changed(); };
         if (mbOn[i]) addShown(r, lo, hi); else r.classList.add('off');
@@ -2828,6 +2836,7 @@ $('btnConnect').onclick = connect;
     rows.forEach((row, i) => {
       const r = document.createElement('div'); r.className = 'mr';
       const top = document.createElement('div'); top.className = 'top'; r.appendChild(top);
+      top.insertAdjacentHTML('beforeend', icon({joyx:'joy', joyy:'joy'}[row.k] || row.k));
       const k = document.createElement('select'); k.setAttribute('aria-label', tr('Sensor'));
       opt(k, Object.entries(RS).map(([key, d]) => [d.label, key]), row.k);
       top.appendChild(k);
@@ -2942,7 +2951,7 @@ ${reads || '    pass'}
   };
   function setRunning(){
     shown.forEach(s => { s.cell.textContent = '–'; s.fill.style.width = '0'; s.t = Date.now(); s.row.classList.remove('stale'); });
-    running = true; goBtn.textContent = tr('Stop'); goBtn.classList.add('on');
+    running = true; win.classList.add('on'); goBtn.textContent = tr('Stop'); goBtn.classList.add('on');
   }
   async function start(){
     if (WITH_PROG && S.stream && S.userRun) {
@@ -2959,7 +2968,7 @@ ${reads || '    pass'}
     try { await run(); } finally { S.override = null; }
     if (!S.stream) setStopped();
   }
-  function setStopped(){ if (running) quietUntil = Date.now() + 1500; running = false; goBtn.textContent = tr('Start'); goBtn.classList.remove('on'); }
+  function setStopped(){ if (running) quietUntil = Date.now() + 1500; running = false; win.classList.remove('on'); goBtn.textContent = tr('Start'); goBtn.classList.remove('on'); }
   goBtn.onclick = async () => { if (running) { await stop(); setStopped(); } else start(); };
   win.querySelector('.mx').onclick = async () => { win.hidden = true; if (running) { await stop(); setStopped(); } };
 
