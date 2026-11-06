@@ -2852,7 +2852,8 @@ async function ensureSramLib(){
   if (m && m[1] === tag && +m[2] === size) return;
   setStatus('busy', 'Installing screen library…');
   await withSpace(() => uploadFile('lcd_sram.py', SRAM_LIB));
-  await softReset();
+  /* forget an older lcd_sram loaded before (no restart needed: it sets nothing up itself) */
+  await execRaw("import sys\nsys.modules.pop('lcd_sram', None)");
 }
 async function sramEnsure(){
   const code = program();
@@ -2934,6 +2935,19 @@ window.sramHook = code => {
   const plainConnect = connect;
   connect = (...a) => { sramState = null; return plainConnect(...a); };
 }
+
+/* "Start fresh" after files change: a full restart of the micro:bit instead of MicroPython's soft restart.
+   On the micro:bit V2 the screen's SPI wires can be set up only once after the micro:bit powers on or
+   restarts; a soft restart doesn't free them, so the screen library setting them up again after a soft
+   restart stopped the micro:bit (error 020) and it sent nothing back. A full restart frees them. */
+softReset = async function(){
+  setStatus('busy', 'Restarting the micro:bit…');
+  S.rx = '';
+  await sendChunks('import machine\nmachine.reset()\n'); await write('\x04');
+  await sleep(2500);
+  S.micDirty = false;
+  await enterRaw();
+};
 
 $('btnNew').onclick = () => {
   if (!newArmed) { newArmed = true; $('btnNew').textContent = 'Sure? Click again'; setTimeout(() => { newArmed = false; $('btnNew').textContent = 'Start over'; }, 3000); return; }
