@@ -2855,20 +2855,27 @@ def _add(i, v, k):
   elif not (k == 2 and v == 0):
     _S[i] += v
     _C[i] += 1
+_L = [None] * ${n}
+_F = [0]
 def _send():
-  # all values in one line with a check number, so a line with lost letters is noticed and skipped
-  out = []
+  # one short line per sensor with a check number, only when the value changed (all of them every ~3 s);
+  # a line with lost letters is skipped and costs just that one value
+  _F[0] -= 1
+  full = _F[0] <= 0
+  if full:
+    _F[0] = ${Math.max(1, Math.round(3000 / every))}
   for i in range(${n}):
     if _C[i]:
       v = _S[i] if _K[i] == 1 else round(_S[i] / _C[i])
     else:
       v = '?' if _B[i] else 0
-    out.append(str(v))
     _S[i] = 0
     _C[i] = 0
     _B[i] = 0
-  s = ','.join(out)
-  print('@M|' + s + '|' + str(sum(map(ord, s)) % 89 + 10))
+    if full or v != _L[i]:
+      _L[i] = v
+      s = str(i) + ':' + str(v)
+      print('@' + s + ':' + str(sum(map(ord, s)) % 89 + 10))
 _t = running_time() - ${every} + 150  # the first values come quickly
 _n = 0
 while True:
@@ -2902,6 +2909,8 @@ ${reads || '  pass'}
     else:
       S[i] += v
       C[i] += 1
+  L = [None] * ${n}
+  F = 0
   t = running_time() - ${every} + 150
   r = 0
   while True:
@@ -2909,18 +2918,22 @@ ${reads || '    pass'}
     r += 1
     if running_time() - t >= ${every}:
       t = running_time()
-      out = []
+      F -= 1
+      full = F <= 0
+      if full:
+        F = ${Math.max(1, Math.round(3000 / every))}
       for i in range(${n}):
         if C[i]:
           v = S[i] if K[i] == 1 else round(S[i] / C[i])
         else:
           v = '?' if B[i] else 0
-        out.append(str(v))
         S[i] = 0
         C[i] = 0
         B[i] = 0
-      s = ','.join(out)
-      print('@M|' + s + '|' + str(sum(map(ord, s)) % 89 + 10))
+        if full or v != L[i]:
+          L[i] = v
+          s = str(i) + ':' + str(v)
+          print('@' + s + ':' + str(sum(map(ord, s)) % 89 + 10))
     yield 50
 `;
   }
@@ -2959,7 +2972,9 @@ ${reads || '    pass'}
   const check = t => { let n = 0; for (const ch of t) n += ch.charCodeAt(0); return n % 89 + 10; };
   let line = '';
   function takeLine(l){
-    let m = /^@M\|(.*)\|(\d+)$/.exec(l);
+    let m = /^@(\d+):([^:]*):(\d+)$/.exec(l);
+    if (m) { if (check(m[1] + ':' + m[2]) === +m[3] && running && cells[+m[1]]) cells[+m[1]].textContent = m[2]; return; }
+    m = /^@M\|(.*)\|(\d+)$/.exec(l);
     if (m) { if (check(m[1]) === +m[2] && running) m[1].split(',').forEach((v, i) => { if (cells[i]) cells[i].textContent = v; }); return; }
     m = /^@C\|(.*)\|(\d+)$/.exec(l);
     if (m) { if (check(m[1]) === +m[2] && window.calLine) window.calLine(m[1].split(',').map(Number)); return; }
