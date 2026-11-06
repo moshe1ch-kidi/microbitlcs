@@ -3035,6 +3035,21 @@ againIfNoReply = async function(step){
   }
 };
 
+/* After Stop: the micro:bit answers with "KeyboardInterrupt" and a few lines, and on a connection that
+   loses letters these came as program output ("Traceback… eyboarIntrrpt") and then as an error ">OK".
+   For 2.5 seconds after Stop the program's output is not shown and its answer is never an error. */
+let stopAt = 0;
+$('btnStop').addEventListener('click', () => { stopAt = Date.now(); }, true);
+{
+  const plainOutRaw = outRaw;
+  outRaw = text => { if (Date.now() - stopAt < 2500 || /^\s*>\s*$/.test(text)) return; plainOutRaw(text); };  /* a late ">" alone is not output */
+  const plainFinish = finishRun;
+  finishRun = err => {
+    const e = String(err || '');
+    plainFinish(Date.now() - stopAt < 2500 ? 'KeyboardInterrupt' : /^[\s>OK]*$/.test(e) ? '' : err);  /* after Stop: "The program stopped." */
+  };
+}
+
 $('btnNew').onclick = () => {
   if (!newArmed) { newArmed = true; $('btnNew').textContent = 'Sure? Click again'; setTimeout(() => { newArmed = false; $('btnNew').textContent = 'Start over'; }, 3000); return; }
   newArmed = false; $('btnNew').textContent = 'Start over'; ws.clear(); addStart();
