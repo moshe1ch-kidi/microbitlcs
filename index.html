@@ -2949,6 +2949,39 @@ softReset = async function(){
   await enterRaw();
 };
 
+/* Is the screen library built in? The answer is a number, and a lost digit made it look like an older
+   library, so the library was sent as files for nothing. Now: the right number once = built in;
+   the same other number twice = really older; anything else = ask again (3 times), then "not sure". */
+builtInLibrary = async function(){
+  const seen = [];
+  let last = '';
+  for (let i = 0; i < 4; i++) {
+    const r = await execRaw("try:\n import lcdfw\n print('Q%dQ' % sum(len(v) for v in lcdfw.T.values()))\nexcept ImportError:\n print('QnoQ')");
+    last = r.out + r.err;
+    const m = /Q(\d+|no)Q/.exec(r.out);
+    if (!m) continue;
+    if (m[1] === 'no') return 'none';
+    if (+m[1] === FW_PRINT) return 'same';
+    if (seen.includes(m[1])) return 'older';
+    seen.push(m[1]);
+  }
+  log('Could not tell if the screen library is built into MicroPython, so it is sent as files.', 'info', 'answer: ' + JSON.stringify(last.slice(0, 200)));
+  return 'unknown';
+};
+/* sending again: say for the teacher what went wrong, and on the last try restart the micro:bit fully
+   (without the microphone message, which belongs to something else) */
+againIfNoReply = async function(step){
+  for (let i = 0; ; i++) {
+    try { return await step(); }
+    catch(e) {
+      if (!noReply(e) || i >= 2) throw e;
+      log('The micro:bit missed part of a file. Sending it again…', 'info', String(e && e.message || e));
+      await sleep(400);
+      if (i === 1) await softReset(); else await enterRaw();
+    }
+  }
+};
+
 $('btnNew').onclick = () => {
   if (!newArmed) { newArmed = true; $('btnNew').textContent = 'Sure? Click again'; setTimeout(() => { newArmed = false; $('btnNew').textContent = 'Start over'; }, 3000); return; }
   newArmed = false; $('btnNew').textContent = 'Start over'; ws.clear(); addStart();
