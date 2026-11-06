@@ -2964,14 +2964,23 @@ ${reads || '    pass'}
     }
     if (S.stream) { await stop(); await sleep(400); }
     setRunning();
+    alone = true;
     S.override = code();
     try { await run(); } finally { S.override = null; }
     if (!S.stream) setStopped();
   }
-  function setStopped(){ if (running) quietUntil = Date.now() + 1500; running = false; win.classList.remove('on'); goBtn.textContent = tr('Start'); goBtn.classList.remove('on'); }
+  function setStopped(){ if (running) quietUntil = Date.now() + 1500; alone = false; running = false; win.classList.remove('on'); goBtn.textContent = tr('Start'); goBtn.classList.remove('on'); }
   goBtn.onclick = async () => { if (running) { await stop(); setStopped(); } else start(); };
   win.querySelector('.mx').onclick = async () => { win.hidden = true; if (running) { await stop(); setStopped(); } };
 
+  /* The window's own reading program says nothing in the messages: no "sending", "running" or "stopped".
+     Only a real problem (an error) is still shown there. */
+  let alone = false;
+  const plainLog = log;
+  log = (text, kind = 'info', detail = '') => {
+    if ((alone || Date.now() < quietUntil) && kind !== 'err') return;
+    plainLog(text, kind, detail);
+  };
   /* ---- what comes back from the micro:bit ---- */
   const check = t => { let n = 0; for (const ch of t) n += ch.charCodeAt(0); return n % 89 + 10; };
   let pend = '', line = '', quietUntil = 0;
@@ -2983,6 +2992,7 @@ ${reads || '    pass'}
     if (m) { if (check(m[1] + '|' + m[2]) === +m[3]) window.watchShow(m[1], m[2]); return; }
     if (/@|^W\||^C\|/.test(l)) return;   /* a value line that lost letters */
     if (reading() && /:/.test(l) && /^[\d:.?\-\s]*$/.test(l)) return;   /* a packet that lost both of its ends */
+    if (reading() && !l.trim()) return;   /* the empty line left after the packets were taken out */
     outRaw(l + '\n');
   }
   function feed(text){
