@@ -274,7 +274,7 @@ input[type=file]{font:inherit;max-width:100%}
   </div>
 </div>
 
-<script type="text/plain" id="sramlib"># lcd_sram v4 - pictures kept in the screen board's memory chip (23LC1024, 128 KB) instead of the micro:bit's files
+<script type="text/plain" id="sramlib"># sramld v5 - pictures kept in the screen board's memory chip (23LC1024, 128 KB) instead of the micro:bit's files
 # The chip shares the SPI wires with the screen: its select is pin2, the screen's is pin16, so the screen is
 # switched off the wires (pin16 high) while the chip is used. The chip keeps its contents while it has power,
 # also when the micro:bit restarts, and loses them when the power goes off.
@@ -2580,6 +2580,7 @@ async function run(){
       /* wake the microphone before the screen starts (same line, so error line numbers don't move) */
       _code = _code.replace('from microbit import *\n', 'from microbit import *;microphone.sound_level()\n');
     }
+    { let n = -1; for (let i = 0; i < 15 && n !== S.rx.length; i++) { n = S.rx.length; await sleep(80); } }
     S.rx = ''; await sendChunks(_code);
     setStatus('run', 'Running on micro:bit');
     log('Your program is running on the micro:bit.', 'info');
@@ -2868,7 +2869,8 @@ async function againIfNoReply(step){
    Backgrounds, emoji, sprites and animals are kept in the chip on the screen board instead of the
    micro:bit's 20 KB of files. The chip keeps them while it has power (also when the micro:bit restarts)
    and loses them when the power goes off: then they are sent again on the next Run.
-   A small library, lcd_sram.py, does the work on the micro:bit. When the chip doesn't answer
+   A small library, sramld.py, does the work on the micro:bit (its name doesn't start with "lcd", because
+   files starting with "lcd" are removed when the screen library is built into MicroPython). When the chip doesn't answer
    (no screen, or a different board) everything works as before, with the micro:bit's files. */
 const SRAM_LIB = document.getElementById('sramlib').textContent;
 let sramState = null;            /* null = not asked yet, 'ok' = the chip answers, 'no' = it doesn't */
@@ -2885,7 +2887,7 @@ async function screenCheck(){
   if (sramState === 'ok') return;
   sramState = null;
   await ensureSramLib();
-  const r = await execRaw("import lcd_sram\nprint('M:' + ('1' if lcd_sram.ok() else '0') + ':M')");
+  const r = await execRaw("import sramld\nprint('M:' + ('1' if sramld.ok() else '0') + ':M')");
   const m = /M:([01]):M/.exec(r.out);
   if (!m) throw new Error('timeout "chip"');
   sramState = m[1] === '1' ? 'ok' : 'no';
@@ -2895,13 +2897,13 @@ async function screenCheck(){
 const picSum = bytes => { let s = 0; for (const b of bytes) s = (s + b) & 65535; return s; };
 async function ensureSramLib(){
   const tag = SRAM_LIB.split('\n')[0].trim(), size = new TextEncoder().encode(SRAM_LIB).length;
-  const r = await execRaw("import os\ntry:\n f=open('lcd_sram.py')\n print('S|' + f.readline().strip() + '|' + str(os.size('lcd_sram.py')) + '|S')\n f.close()\nexcept OSError:\n print('S|none|0|S')");
+  const r = await execRaw("import os\ntry:\n f=open('sramld.py')\n print('S|' + f.readline().strip() + '|' + str(os.size('sramld.py')) + '|S')\n f.close()\nexcept OSError:\n print('S|none|0|S')");
   const m = /S\|(.*)\|(\d+)\|S/.exec(r.out);
   if (m && m[1] === tag && +m[2] === size) return;
   setStatus('busy', 'Installing screen library…');
-  await withSpace(() => uploadFile('lcd_sram.py', SRAM_LIB));
-  /* forget an older lcd_sram loaded before (no restart needed: it sets nothing up itself) */
-  await execRaw("import sys\nsys.modules.pop('lcd_sram', None)");
+  await withSpace(() => uploadFile('sramld.py', SRAM_LIB));
+  /* forget an older sramld loaded before (no restart needed: it sets nothing up itself) */
+  await execRaw("import sys\nsys.modules.pop('sramld', None)");
 }
 async function sramEnsure(){
   const code = program();
@@ -2911,7 +2913,7 @@ async function sramEnsure(){
   if (sramState === 'no') screenMissing();
   await ensureSramLib();
   if (sramState === null) {
-    const r = await execRaw("import lcd_sram\nprint('M:' + ('1' if lcd_sram.ok() else '0') + ':M')");
+    const r = await execRaw("import sramld\nprint('M:' + ('1' if sramld.ok() else '0') + ':M')");
     const m = /M:([01]):M/.exec(r.out);
     if (!m) throw new Error('timeout "chip"');   /* no clear answer: ask again (the step is tried again) */
     sramState = m[1] === '1' ? 'ok' : 'no';
@@ -2922,7 +2924,7 @@ async function sramEnsure(){
   const list = todo.map(p => `(${JSON.stringify(p.file)},${p.bytes.length},${p.sum})`).join(',');
   let have = null;
   for (let i = 0; i < 3 && have === null; i++) {
-    const r = await execRaw(`import lcd_sram\nprint('P:' + lcd_sram.check((${list},)) + ':P')`);
+    const r = await execRaw(`import sramld\nprint('P:' + sramld.check((${list},)) + ':P')`);
     const m = /P:([01]+):P/.exec(r.out);
     if (m && m[1].length === todo.length) have = m[1];
   }
@@ -2931,7 +2933,7 @@ async function sramEnsure(){
     if (have[i] === '1') continue;
     const p = todo[i];
     setStatus('busy', 'Sending picture…');
-    let r = await execRaw(`import lcd_sram\nlcd_sram.begin('${p.file}',${p.bytes.length})`);
+    let r = await execRaw(`import sramld\nsramld.begin('${p.file}',${p.bytes.length})`);
     if (r.err) throw new Error(r.err);
     /* pieces of 96 bytes, written as base64 (3 times shorter than \xNN); each one's sum comes back, and a
        piece that arrived wrong is sent again (up to 5 times) */
@@ -2942,7 +2944,7 @@ async function sramEnsure(){
       let ok = false;
       for (let t = 0; t < 5 && !ok; t++) {
         try {
-          r = await execRaw(`print('W' + str(lcd_sram.w(${k},'${lit}')) + 'W')`);
+          r = await execRaw(`print('W' + str(sramld.w(${k},'${lit}')) + 'W')`);
           const mw = /W(\d+)W/.exec(r.out);
           ok = !!mw && +mw[1] === want;
         } catch (e) { if (!noReply(e)) throw e; await enterRaw(); }
@@ -2953,7 +2955,7 @@ async function sramEnsure(){
        answer itself can lose a digit on the way */
     const sums = [];
     for (let t = 0; t < 3; t++) {
-      r = await execRaw(`print('D' + str(lcd_sram.done()) + 'D')`);
+      r = await execRaw(`print('D' + str(sramld.done()) + 'D')`);
       const m = /D(\d+)D/.exec(r.out);
       if (m) sums.push(+m[1]);
       if (sums.includes(p.sum)) break;
@@ -2973,13 +2975,13 @@ ensureAnimals = () => againIfNoReply(sramEnsure);
   const libsEnsure = ensureLcd;
   ensureLcd = () => againIfNoReply(async () => { await libsEnsure(); if (libsNeeded(program()).length) await screenCheck(); });
 }
-/* the program reads its pictures through lcd_sram (added on the first line, so error line numbers stay) */
+/* the program reads its pictures through sramld (added on the first line, so error line numbers stay) */
 window.sramHook = code => {
   if (sramState !== 'ok') return code;
   if (!(aniUsed(code).length || emoUsed(code).length || bgUsed(code).length)) return code;
   const mods = libsNeeded(code).filter(n => ['lcd_bg', 'lcd_emoji', 'lcd_sprite', 'lcd_shape'].includes(n));
   if (!mods.length) return code;
-  return code.replace('from microbit import *', `from microbit import *;import lcd_sram;lcd_sram.hook(${mods.map(n => `'${n}'`).join(',')})`);
+  return code.replace('from microbit import *', `from microbit import *;import sramld;sramld.hook(${mods.map(n => `'${n}'`).join(',')})`);
 };
 /* a new connection may be a different micro:bit or screen: ask the chip again */
 {
